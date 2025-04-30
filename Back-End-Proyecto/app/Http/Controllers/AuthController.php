@@ -31,6 +31,16 @@ if ($validator->fails()) {
         'errors'  => $validator->errors(),
     ], 422);
 }
+
+// Validar RUT con la función personalizada
+$rutValidation = $this->phpRule_ValidarRut($request->rut);
+if ($rutValidation['error']) {
+    return response()->json([
+        'status'  => 'error',
+        'message' => $rutValidation['msj'],
+    ], 422);
+}
+
 // Asignar rol por defecto (2 = paciente)
 $roleId = 2;
 
@@ -52,14 +62,6 @@ $user = User::create([
             'data' => $user,
         ], 201);
 
- // Validar RUT con la función personalizada
- $rutValidation = $this->phpRule_ValidarRut($request->rut);
- if ($rutValidation['error']) {
-     return response()->json([
-         'status'  => 'error',
-         'message' => $rutValidation['msj'],
-     ], 422);
- }
 }
 
 public function phpRule_ValidarRut($rut) {
