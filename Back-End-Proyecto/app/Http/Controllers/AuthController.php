@@ -53,6 +53,7 @@ $user = User::create([
     'email'     => $request->email,
     'password'  => bcrypt($request->password),
     'role_id'   => $roleId,
+    'enable'    => true,
 ]);
 
 //Usuario registrado con éxito
@@ -154,6 +155,14 @@ public function phpRule_ValidarRut($rut) {
     
     // Obtener usuario autenticado
     $user = JWTAuth::user();
+
+    // Verificar si el usuario está habilitado
+    if (!$user->enable()) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Usuario deshabilitado. Contacte al administrador.',
+        ], 403);
+    }
 
     // Respuesta exitosa con token y datos del usuario
     return response()->json([
