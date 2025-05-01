@@ -5,7 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 
 class AuthController extends Controller
 {
@@ -184,18 +188,98 @@ public function phpRule_ValidarRut($rut) {
     ], 500);
         }
     }
+    // Envío de email con link de recuperación de contraseña
+    public function forgotPassword(Request $request)
+    {
+        // Validar los datos de entrada
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email|max:255|exists:users,email',
+        ]);
+
+        // Si la validación falla, devolver un error
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Error de validación',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        // Obtener el email del request
+        $email = $request->input('email');
+
+        // Verificar si el usuario existe
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Usuario no encontrado',
+            ], 404);
+        }
+
+        //Generar código aleatorio de 5 digitos
+        $code = rand(10000, 99999);
+        // Guardar el código en la base de datos 
+        session(['reset_code' => $code]);
+        session(['reset_code_expiration' => Carbon::now()->addMinutes(5)]);
+
+        // Enviar email (con vista Blade) -> Blade es un motor de plantillas de Laravel
+        Mail::send('emails.forgot_password', [
+            'user' => $user,
+            'resetCode' => $code
+        ], function ($message) use ($user) {
+            $message->to($user->email);
+            $message->subject('Restablecer contraseña');
+        });
+
+        // Respuesta exitosa
+        return response()->json([
+            'status'  => 'Respuesta exitosa',
+            'message' => 'Correo de recuperación enviado correctamente',
+        ], 200);
+    }
+
+    // Cambiar contraseña usando token
+    public function resetPassword(Request $request)
+    {
+        // Validar los datos de entrada
+        $request->validate([
+            'email'    => 'required|string|email|max:255',
+            'code' => 'required|string|size:5',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($request->input('email') != $request->input('email')) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'El email no coincide con el correo ingresado',
+            ], 422);
+        }
+        
+        // Verificar codigo ingresado
+        if ($user->reset_code != $request->input('code')) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Código inválido o expirado',
+            ], 422);
+        }
+
+        // Verificar si el código ha expirado
+        if (Carbon::now()->greaterThan($user->reset_code_expiration)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Código expirado',
+            ], 422);
+        }
+
+        // Cambiar la contraseña
+        $user->password = Hash::make($request->input('password'));
+        $user->save();
+
+        // Respuesta exitosa
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Contraseña restablecida correctamente',
+        ], 200);
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
