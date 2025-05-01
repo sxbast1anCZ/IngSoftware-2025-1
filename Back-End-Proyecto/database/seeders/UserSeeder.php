@@ -22,7 +22,7 @@ class UserSeeder extends Seeder
             'phone' => '+56964690977',
             'email' => 'test@test.com',
             'password' => bcrypt('123456'),
-
+            'enabled' => true,
         ]);
 
     }
