@@ -127,7 +127,7 @@ public function phpRule_ValidarRut($rut) {
 }
 
     //Metodo de login
-
+    
     public function login(Request $request)
 {
     // Validar los datos de entrada
@@ -161,7 +161,7 @@ public function phpRule_ValidarRut($rut) {
     $user = JWTAuth::user();
 
     // Verificar si el usuario está habilitado
-    if (!$user->enable()) {
+    if (!$user->enabled) {
         return response()->json([
             'status'  => 'error',
             'message' => 'Usuario deshabilitado. Contacte al administrador.',
@@ -188,6 +188,7 @@ public function phpRule_ValidarRut($rut) {
     ], 500);
         }
     }
+
     // Envío de email con link de recuperación de contraseña
     public function forgotPassword(Request $request)
     {
@@ -217,16 +218,19 @@ public function phpRule_ValidarRut($rut) {
             ], 404);
         }
 
-        //Generar código aleatorio de 5 digitos
-        $code = rand(10000, 99999);
-        // Guardar el código en la base de datos 
-        session(['reset_code' => $code]);
-        session(['reset_code_expiration' => Carbon::now()->addMinutes(5)]);
+        // Token con expiracion en 5 minutos
+        $token = JWTAuth::customClaims([
+            'email' => $user->email,
+            'exp'   => Carbon::now()->addMinutes(10)->timestamp,
+        ])->FromUser($user);
+
+        // Generar link de recuperación
+        $resetLink = 'https://www.youtube.com/watch?v=G2gYUVQrLzQ';
 
         // Enviar email (con vista Blade) -> Blade es un motor de plantillas de Laravel
         Mail::send('emails.forgot_password', [
             'user' => $user,
-            'resetCode' => $code
+            'resetLink' => $resetLink
         ], function ($message) use ($user) {
             $message->to($user->email);
             $message->subject('Restablecer contraseña');
@@ -245,7 +249,7 @@ public function phpRule_ValidarRut($rut) {
         // Validar los datos de entrada
         $request->validate([
             'email'    => 'required|string|email|max:255',
-            'code' => 'required|string|size:5',
+            'token' => 'required|string',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
@@ -255,31 +259,46 @@ public function phpRule_ValidarRut($rut) {
                 'message' => 'El email no coincide con el correo ingresado',
             ], 422);
         }
-        
-        // Verificar codigo ingresado
-        if ($user->reset_code != $request->input('code')) {
+
+        try {
+            // Verificar el token
+            $token = $request->input('token');
+            $payload = JWTAuth::setToken($token)->getPayload();
+
+            // Obtener el email del payload
+            $email = $payload->get('email');
+
+            // Verificar si el usuario existe
+            $user = User::where('email', $email)->first();
+            if (!$user) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'User not found',
+                ], 404);
+            }
+
+            // Actualizar la contraseña
+            $user->password = Hash::make($request->input('password'));
+            $user->save();
+
+            // Respuesta exitosa
+            return response()->json([
+                'status'  => 'Respuesta exitosa',
+                'message' => 'Contraseña restablecida correctamente',
+            ], 200);
+
+        } catch (TokenExpiredException $e) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Código inválido o expirado',
-            ], 422);
-        }
+                'message' => 'El enlace ha expirado',
+            ], 401);
 
-        // Verificar si el código ha expirado
-        if (Carbon::now()->greaterThan($user->reset_code_expiration)) {
+        } catch (\Exception $e) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Código expirado',
-            ], 422);
+                'message' => 'Error al restablecer la contraseña',
+                'errors'  => $e->getMessage(),
+            ], 500);
         }
-
-        // Cambiar la contraseña
-        $user->password = Hash::make($request->input('password'));
-        $user->save();
-
-        // Respuesta exitosa
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Contraseña restablecida correctamente',
-        ], 200);
     }
 }
