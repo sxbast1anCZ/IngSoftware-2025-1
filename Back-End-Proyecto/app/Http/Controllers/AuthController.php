@@ -36,6 +36,8 @@ if ($validator->fails()) {
     ], 422);
 }
 
+
+
 // Validar RUT con la función personalizada
 $rutValidation = $this->phpRule_ValidarRut($request->rut);
 if ($rutValidation['error']) {
@@ -68,7 +70,72 @@ $user = User::create([
         ], 201);
 
 }
+// Metodo para registrar doctor
+public function registerDoctor(Request $request)
+{
+    // Validar los datos de entrada
+    $validator = Validator::make($request->all(), [
+        'name'       => 'required|string|min:3|max:255',
+        'lastname'   => 'required|string|min:3|max:255',
+        'profession' => 'required|string|max:255',
+        'rut'        => 'required|string|min:9|max:10|unique:users',
+        'phone'      => 'required|string|size:12',
+        'email'      => 'required|string|email|max:255|unique:users',
+    ]);
+      // Si la validacion falla, devolver errores
+    if ($validator->fails()) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Error de validacion',
+            'errors'  => $validator->errors(),
+        ], 422);
+    }
+       // Validar que el RUT sea correcto 
+    $rutValidation = $this->phpRule_ValidarRut($request->rut);
+    if ($rutValidation['error']) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => $rutValidation['msj'],
+        ], 422);
+    }
 
+    // Generar una contrasena aleatoria de 10 caracteres
+    $randomPassword = str()->random(10);
+
+    // Crear el usuario doctor con los datos recibidos
+    $doctor = User::create([
+        'name'       => $request->name,
+        'lastname'   => $request->lastname,
+        'rut'        => $request->rut,
+        'phone'      => $request->phone,
+        'email'      => $request->email,
+        'profession' => $request->profession,
+        'password'   => bcrypt($randomPassword),
+        'role_id'    => 3, // rol id de medico 
+        'enable'     => true,
+    ]);
+
+    // Enviar correo al doctor con su contrasena generada
+
+    Mail::send('emails.doctor_registered', [
+        'user'     => $doctor,
+        'password' => $randomPassword,
+    ], function ($message) use ($doctor) {
+        $message->to($doctor->email);
+        $message->subject('Registro de Cuenta de Medico');
+    });
+
+    // Respuesta exitosa con los datos del doctor creado
+    
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Medico registrado correctamente. Contraseña enviada por correo.',
+        'data'    => $doctor,
+    ], 201);
+}
+
+
+// Metodo para validar rut
 public function phpRule_ValidarRut($rut) {
 
     // Verifica que no esté vacio y que el string sea de tamaño mayor a 3 carácteres(1-9)        
