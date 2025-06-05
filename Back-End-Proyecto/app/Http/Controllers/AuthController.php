@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
@@ -300,5 +302,55 @@ public function phpRule_ValidarRut($rut) {
                 'errors'  => $e->getMessage(),
             ], 500);
         }
+    }
+
+
+    // Método para agendar una cita
+    public function scheduleAppointment(Request $request)
+    {
+        $validated = $request->validate([
+            'doctor_id' => 'required|exists:users,id',
+            'scheduled_at' => 'required|date|after:now',
+            'reason' => 'nullable|string',
+        ]);
+
+        try {
+            $patient = JWTAuth::parseToken()->authenticate();
+        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+            return response()->json(['error' => 'Token inválido o no proporcionado'], 401);
+        }
+
+        if (!$patient->isPatient()) {
+            return response()->json(['error' => 'Solo los pacientes pueden agendar citas.'], 403);
+        }
+
+        $appointment = Appointment::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $validated['doctor_id'],
+            'scheduled_at' => $validated['scheduled_at'],
+            'reason' => $validated['reason'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Cita agendada exitosamente',
+            'appointment' => $appointment
+        ], 201);
+    }
+
+    public function getAppointments()
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'No autenticado'], 401);
+        }
+
+        if ($user->isPatient()) {
+            return Appointment::where('patient_id', $user->id)->get();
+        } elseif ($user->isDoctor()) {
+            return Appointment::where('doctor_id', $user->id)->get();
+        }
+
+        return response()->json(['message' => 'Rol no válido'], 403);
     }
 }
