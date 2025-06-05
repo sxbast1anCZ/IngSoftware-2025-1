@@ -9,3 +9,5 @@ Route::post('register', [AuthController::class, 'register']);
 Route::post('password/forgot', [AuthController::class, 'forgotPassword']);
 Route::post('password/reset', [AuthController::class, 'resetPassword']);
 Route::post('register2', [AuthController::class, 'registerDoctor']);
+Route::post('/appointments', [AuthController::class, 'scheduleAppointment']);
+Route::middleware('auth:api')->get('/appointments', [AuthController::class, 'getAppointments']);

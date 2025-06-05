@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('lastname');
+            $table->string('profession')->nullable(); // Solo se usa si es médico
             $table->foreignId('role_id')->constrained()->onDelete('cascade');
             $table->string('rut')->unique();
             $table->string('phone');

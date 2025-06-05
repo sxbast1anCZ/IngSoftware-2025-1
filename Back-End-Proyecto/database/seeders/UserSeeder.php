@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
+
 class UserSeeder extends Seeder
 {
     /**
@@ -23,6 +24,18 @@ class UserSeeder extends Seeder
             'email' => 'test@test.com',
             'password' => bcrypt('123456'),
             'enabled' => true,
+        ]);
+
+        User::create([
+            'name' => 'Cristian',
+            'lastname' => 'Alvarez',
+            'profession' => 'Dentista',
+            'role_id' => 3,
+            'rut' => '209723735',
+            'phone' => '+56966699642',
+            'email' => 'test2@test.com',
+            'password' => bcrypt('123456'),
+            'enabled' => false,
         ]);
 
     }

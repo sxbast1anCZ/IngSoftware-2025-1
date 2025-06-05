@@ -21,6 +21,7 @@ class User extends Authenticatable implements JWTSubject
         //Añadir todos los campos que se crearon en las tablas de usuario
         'name',
         'lastname',
+        'profession',
         'role_id',
         'rut',
         'phone',
