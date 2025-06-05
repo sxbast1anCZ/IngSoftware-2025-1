@@ -230,7 +230,7 @@ public function phpRule_ValidarRut($rut) {
     $user = JWTAuth::user();
 
     // Verificar si el usuario está habilitado
-    if (!$user->enable()) {
+    if (!$user->enabled) {
         return response()->json([
             'status'  => 'error',
             'message' => 'Usuario deshabilitado. Contacte al administrador.',
