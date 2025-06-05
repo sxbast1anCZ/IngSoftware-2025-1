@@ -59,7 +59,7 @@ $user = User::create([
     'email'     => $request->email,
     'password'  => bcrypt($request->password),
     'role_id'   => $roleId,
-    'enabled'    => true,
+    'enable'    => true,
 ]);
 
 //Usuario registrado con éxito
