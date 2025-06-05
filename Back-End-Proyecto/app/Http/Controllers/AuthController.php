@@ -59,7 +59,7 @@ $user = User::create([
     'email'     => $request->email,
     'password'  => bcrypt($request->password),
     'role_id'   => $roleId,
-    'enable'    => true,
+    'enabled'    => true,
 ]);
 
 //Usuario registrado con éxito
@@ -368,4 +368,99 @@ public function phpRule_ValidarRut($rut) {
             ], 500);
         }
     }
+
+    
+    public function listUsers()
+{
+    // Obtener todos los usuarios excepto administradores (role_id = 1)
+    $users = User::whereIn('role_id', [2, 3])
+                 ->select('id', 'name', 'lastname', 'rut', 'phone', 'email', 'role_id', 'enabled')
+                 ->get();
+
+    return response()->json([
+        'status' => 'success',
+        'data'   => $users
+    ]);
+}
+
+//revisar
+     public function toggleUserStatus($id)
+{
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Usuario no encontrado'
+        ], 404);
+    }
+
+    if ($user->role_id === 1) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'No se puede modificar el estado de un administrador'
+        ], 403);
+    }
+
+    $user->enabled = !$user->enabled;
+    $user->save();
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Estado de la cuenta actualizado correctamente',
+        'data'    => [
+            'id'      => $user->id,
+            'enabled' => $user->enabled
+        ]
+    ]);
+}
+
+//revisar
+public function updateUser(Request $request, $id)
+{
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Usuario no encontrado'
+        ], 404);
+    }
+
+    $validator = Validator::make($request->all(), [
+        'name'     => 'sometimes|required|string|min:3|max:255',
+        'lastname' => 'sometimes|required|string|min:3|max:255',
+        'rut'      => "sometimes|required|string|min:9|max:10|unique:users,rut,$id",
+        'phone'    => 'sometimes|required|string|size:12',
+        'email'    => "sometimes|required|email|max:255|unique:users,email,$id",
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Errores de validación',
+            'errors'  => $validator->errors()
+        ], 422);
+    }
+
+    // Validar RUT si se envió
+    if ($request->has('rut')) {
+        $rutValidation = $this->phpRule_ValidarRut($request->rut);
+        if ($rutValidation['error']) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $rutValidation['msj'],
+            ], 422);
+        }
+    }
+
+    $user->update($request->only(['name', 'lastname', 'rut', 'phone', 'email']));
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Usuario actualizado correctamente',
+        'data'    => $user
+    ]);
+}
+
 }
