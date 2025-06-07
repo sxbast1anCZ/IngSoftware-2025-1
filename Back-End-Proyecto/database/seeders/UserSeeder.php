@@ -38,5 +38,16 @@ class UserSeeder extends Seeder
             'enabled' => false,
         ]);
 
+         User::create([
+            'name' => 'Antonia',
+            'lastname' => 'Flores',
+            'role_id' => 2,
+            'rut' => '212027987',
+            'phone' => '+56949989231',
+            'email' => 'test3@test.com',
+            'password' => bcrypt('123456'),
+            'enabled' => true,
+        ]);
+
     }
 }

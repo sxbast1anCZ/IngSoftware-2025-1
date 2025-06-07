@@ -423,4 +423,172 @@ public function phpRule_ValidarRut($rut) {
 
         return response()->json(['message' => 'Rol no válido'], 403);
     }
+
+    
+    public function listUsers()
+{
+    // Obtener todos los usuarios excepto administradores (role_id = 1)
+    $users = User::whereIn('role_id', [2, 3])
+                 ->select('name', 'lastname', 'rut', 'phone', 'email')
+                 ->get();
+
+    return response()->json([
+        'status' => 'success',
+        'data'   => $users
+    ]);
+}
+
+//revisar
+     public function toggleUserStatus($id)
+{
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Usuario no encontrado'
+        ], 404);
+    }
+
+    if ($user->role_id === 1) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'No se puede modificar el estado de un administrador'
+        ], 403);
+    }
+
+    $user->enabled = !$user->enabled;
+    $user->save();
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Estado de la cuenta actualizado correctamente',
+        'data'    => [
+            'id'      => $user->id,
+            'enabled' => $user->enabled
+        ]
+    ]);
+}
+
+//revisar
+public function updateUser(Request $request, $id)
+{
+  try {
+        $authUser = JWTAuth::parseToken()->authenticate();
+    } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Token expirado, por favor inicia sesión de nuevo',
+        ], 401);
+    } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Token inválido',
+        ], 401);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No autenticado',
+        ], 401);
+    }
+
+    // Solo admins (role_id = 1) o el mismo usuario pueden modificar
+    if ($authUser->role_id !== 1 && $authUser->id != $id) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No tienes permisos para modificar este usuario'
+        ], 403);
+    }
+
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Usuario no encontrado'
+        ], 404);
+    }
+
+    $validator = Validator::make($request->all(), [
+        'name'     => 'sometimes|required|string|min:3|max:255',
+        'lastname' => 'sometimes|required|string|min:3|max:255',
+        'phone'    => 'sometimes|required|string|size:12',
+        'email'    => "sometimes|required|email|max:255|unique:users,email,$id",
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Errores de validación',
+            'errors'  => $validator->errors()
+        ], 422);
+    }
+
+
+    $user->update($request->only(['name', 'lastname', 'phone', 'email']));
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Usuario actualizado correctamente',
+        'data'    => $user
+    ]);
+}
+
+public function updateMe(Request $request)
+{
+    try {
+        $authUser = JWTAuth::parseToken()->authenticate();
+    } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Token expirado, por favor inicia sesión de nuevo',
+        ], 401);
+    } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Token inválido',
+        ], 401);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No autenticado',
+        ], 401);
+    }
+
+    $id = $authUser->id;
+
+    $validator = Validator::make($request->all(), [
+        'name'     => 'sometimes|required|string|min:3|max:255',
+        'lastname' => 'sometimes|required|string|min:3|max:255',
+        'phone'    => 'sometimes|required|string|size:12',
+        'email'    => "sometimes|required|email|max:255|unique:users,email,$id",
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Errores de validación',
+            'errors'  => $validator->errors()
+        ], 422);
+    }
+
+    
+
+    $authUser->update($request->only(['name', 'lastname', 'phone', 'email']));
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Tu perfil fue actualizado correctamente',
+        'data'    => $authUser
+    ]);
+}
+
+
+public function me(Request $request)
+{
+    return response()->json([
+        'user' => $request->user()
+    ]);
+}
+
 }
