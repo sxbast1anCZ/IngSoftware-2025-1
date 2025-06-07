@@ -13,12 +13,12 @@ Route::post('register2', [AuthController::class, 'registerDoctor']);
 // Rutas protegidas para usuarios autenticados y habilitados
 Route::middleware(['is.auth', 'is.enabled'])->group(function () {
     Route::get('me', [AuthController::class, 'me']);
-    Route::post('logout', [AuthController::class, 'logout']);    
+    Route::put('me/updateUser', [AuthController::class, 'updateMe']); 
 });
 
 // Rutas exclusivas para administradores
 Route::middleware(['is.auth', 'is.admin', 'is.enabled'])->group(function () {
     Route::get('admin/users', [AuthController::class, 'listUsers']);
-    Route::put('admin/users/{id}/toggle', [AuthController::class, 'toggleUser']);
-    Route::put('admin/users/{id}', [AuthController::class, 'updateUser']);
+    Route::put('admin/users/{id}/toggle', [AuthController::class, 'toggleUserStatus']);
+    Route::put('users/{id}', [AuthController::class, 'updateUser']); // admin actualiza otro usuario
 });
