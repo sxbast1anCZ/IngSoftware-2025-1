@@ -409,7 +409,7 @@ public function phpRule_ValidarRut($rut) {
 
     public function getAppointments()
     {
-        $user = Auth::user();
+        $user = JWTAuth::parseToken()->authenticate();
 
         if (!$user) {
             return response()->json(['message' => 'No autenticado'], 401);
