@@ -70,4 +70,17 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Role::class, 'role_id');
     }
 
+    public function disponibilidades()
+    {
+        return $this->hasMany(DisponibilidadMedico::class, 'user_id');
+    }
+
+    //Saber si su rol asignado es médico
+    public function esMedico()
+    {
+        return $this->role && $this->role->name === 'doctor';
+    }
+
+
+
 }
