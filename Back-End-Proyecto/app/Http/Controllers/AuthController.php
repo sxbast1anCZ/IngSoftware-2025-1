@@ -15,9 +15,6 @@ use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 
 class AuthController extends Controller
 {
-    
-
-
 
    // Metodo de register
 public function register (Request $request){
@@ -421,6 +418,7 @@ public function phpRule_ValidarRut($rut) {
             return Appointment::where('doctor_id', $user->id)->get();
         }
 
+        
         return response()->json(['message' => 'Rol no válido'], 403);
     }
 
