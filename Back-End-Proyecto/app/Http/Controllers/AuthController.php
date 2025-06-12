@@ -294,7 +294,7 @@ public function phpRule_ValidarRut($rut) {
         ])->FromUser($user);
 
         // Generar link de recuperación
-        $resetLink = 'https://www.youtube.com/watch?v=G2gYUVQrLzQ';
+        $resetLink = 'http://localhost:4200/reset-password';
 
         // Enviar email (con vista Blade) -> Blade es un motor de plantillas de Laravel
         Mail::send('emails.forgot_password', [
