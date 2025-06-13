@@ -35,7 +35,7 @@ class UserSeeder extends Seeder
             'phone' => '+56966699642',
             'email' => 'test2@test.com',
             'password' => bcrypt('123456'),
-            'enabled' => false,
+            'enabled' => true,
         ]);
 
          User::create([

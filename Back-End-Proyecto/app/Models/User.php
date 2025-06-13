@@ -81,11 +81,24 @@ class User extends Authenticatable implements JWTSubject
     }
     
 
-    //Saber si su rol asignado es médico
-    public function esMedico()
-    {
+    //Saber si su rol asignado es médico utilizando el nombre en texto
 
-        return $this->role && $this->role->name === 'doctor';
-    }
+
+public function isDoctor()
+{
+    return $this->role_id === 3;
+}
+
+
+
+public function citasMedicas()
+{
+    return $this->hasMany(Appointment::class, 'doctor_id');
+}
+
+
+
+
+
 
 }

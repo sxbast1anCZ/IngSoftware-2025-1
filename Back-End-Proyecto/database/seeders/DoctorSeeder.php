@@ -54,7 +54,7 @@ class DoctorSeeder extends Seeder
             'rut'        => '19538070-8',
             'phone'      => '+56900000000',
             'email'      => 'paula.reyes@clinica.com',
-            'password'   => bcrypt(Str::random(10)),
+            'password'   => bcrypt(123456),
             'role_id'    => 3,
             'enabled'    => true,
         ]);
