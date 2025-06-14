@@ -21,8 +21,6 @@ class DisponibilidadMedico extends Model
     ];
 
     protected $casts = [
-        'hora_inicio' => 'datetime:H:i',
-        'hora_fin'    => 'datetime:H:i',
         'activo'      => 'boolean',
     ];
 

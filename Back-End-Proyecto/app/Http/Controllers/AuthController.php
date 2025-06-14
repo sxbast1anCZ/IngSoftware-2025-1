@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use App\Models\DisponibilidadMedico;
+use Illuminate\Database\QueryException;
+
 
 class AuthController extends Controller
 {
@@ -373,54 +376,77 @@ public function phpRule_ValidarRut($rut) {
 
 
     // Método para agendar una cita
-    public function scheduleAppointment(Request $request)
-    {
+
+
+
+public function scheduleAppointment(Request $request)
+{
+    try {
         $validated = $request->validate([
-            'doctor_id' => 'required|exists:users,id',
-            'scheduled_at' => 'required|date|after:now',
-            'reason' => 'nullable|string',
+            'doctor_id'     => 'required|exists:users,id',
+            'scheduled_at'  => 'required|date|after:now',
+            'reason'        => 'required|string|max:255',
         ]);
 
-        try {
-            $patient = JWTAuth::parseToken()->authenticate();
-        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
-            return response()->json(['error' => 'Token inválido o no proporcionado'], 401);
+        $user = JWTAuth::parseToken()->authenticate();
+
+        if (!$user->isPatient()) {
+        return response()->json(['error' => 'Solo los pacientes pueden agendar citas.'], 403);
+    }
+
+        $fechaHora = Carbon::parse($validated['scheduled_at']);
+        $diaSemana = $fechaHora->dayOfWeekIso; // lunes = 1 ... domingo = 7
+        $hora      = $fechaHora->format('H:i:s');
+
+        // Buscar disponibilidad activa y válida
+        $disponibilidad = DisponibilidadMedico::where('user_id', $validated['doctor_id'])
+            ->where('dia_semana', $diaSemana)
+            ->where('activo', true)
+            ->whereRaw('? BETWEEN hora_inicio AND hora_fin', [$hora])
+            ->first();
+
+        if (!$disponibilidad) {
+            return response()->json([
+                'error' => 'El médico no está disponible en ese horario.',
+            ], 400);
         }
 
-        if (!$patient->isPatient()) {
-            return response()->json(['error' => 'Solo los pacientes pueden agendar citas.'], 403);
+        // Verificar conflicto con otra cita
+        $conflicto = Appointment::where('doctor_id', $validated['doctor_id'])
+            ->where('scheduled_at', $validated['scheduled_at'])
+            ->exists();
+
+        if ($conflicto) {
+            return response()->json([
+                'error' => 'El horario en el que intentas agendar ya está ocupado.',
+            ], 409);
         }
 
-        $appointment = Appointment::create([
-            'patient_id' => $patient->id,
-            'doctor_id' => $validated['doctor_id'],
-            'scheduled_at' => $validated['scheduled_at'],
-            'reason' => $validated['reason'] ?? null,
+        // Crear cita
+        $cita = Appointment::create([
+            'patient_id'     => $user->id,
+            'doctor_id'      => $validated['doctor_id'],
+            'scheduled_at'   => $validated['scheduled_at'],
+            'duration'       => 30,
+            'price'          => $disponibilidad->precio,
+            'payment_method' => 'pendiente',
+            'status'         => 'pendiente',
+            'reason'         => $validated['reason'],
         ]);
 
         return response()->json([
-            'message' => 'Cita agendada exitosamente',
-            'appointment' => $appointment
+            'message'    => 'Cita agendada exitosamente.',
+            'appointment' => $cita,
         ], 201);
+
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error'   => 'Ocurrió un error inesperado al agendar la cita.',
+            'detalle' => $e->getMessage(),
+        ], 500);
     }
+}
 
-    public function getAppointments()
-    {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json(['message' => 'No autenticado'], 401);
-        }
-
-        if ($user->isPatient()) {
-            return Appointment::where('patient_id', $user->id)->get();
-        } elseif ($user->isDoctor()) {
-            return Appointment::where('doctor_id', $user->id)->get();
-        }
-
-        
-        return response()->json(['message' => 'Rol no válido'], 403);
-    }
 
     
     public function listUsers()
