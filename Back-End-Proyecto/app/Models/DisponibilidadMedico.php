@@ -16,6 +16,7 @@ class DisponibilidadMedico extends Model
         'dia_semana',
         'hora_inicio',
         'hora_fin',
+        'precio',
         'activo',
     ];
 
