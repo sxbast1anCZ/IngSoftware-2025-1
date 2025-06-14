@@ -14,6 +14,7 @@ class Appointment extends Model
         'price',
         'payment_method',
         'status',
+        'reason',
     ];
 
     public function doctor()
