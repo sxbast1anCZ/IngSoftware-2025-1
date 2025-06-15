@@ -447,6 +447,22 @@ public function scheduleAppointment(Request $request)
     }
 }
 
+    public function getAppointments()
+    {
+        $user = JWTAuth::parseToken()->authenticate();
+
+        if (!$user) {
+            return response()->json(['message' => 'No autenticado'], 401);
+        }
+
+        if ($user->isPatient()) {
+            return Appointment::where('patient_id', $user->id)->get();
+        } elseif ($user->isDoctor()) {
+            return Appointment::where('doctor_id', $user->id)->get();
+        }
+
+        return response()->json(['message' => 'Rol no válido'], 403);
+    }
 
     
     public function listUsers()
