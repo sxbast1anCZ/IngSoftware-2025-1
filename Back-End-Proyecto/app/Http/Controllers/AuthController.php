@@ -105,7 +105,7 @@ public function registerDoctor(Request $request)
     }
 
     // Generar una contrasena aleatoria de 10 caracteres
-    $randomPassword = str()->random(10);
+    $randomPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6);
 
     // Crear el usuario doctor con los datos recibidos
     $doctor = User::create([
@@ -453,7 +453,7 @@ public function scheduleAppointment(Request $request)
 {
     // Obtener todos los usuarios excepto administradores (role_id = 1)
     $users = User::whereIn('role_id', [2, 3])
-                 ->select('name', 'lastname', 'rut', 'phone', 'email')
+                 ->select('name', 'lastname', 'rut', 'phone', 'email', 'enabled')
                  ->get();
 
     return response()->json([
