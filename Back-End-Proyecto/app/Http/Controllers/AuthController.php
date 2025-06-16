@@ -105,7 +105,7 @@ public function registerDoctor(Request $request)
     }
 
     // Generar una contrasena aleatoria de 6 caracteres
-$randomPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6);
+    $randomPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6);
 
     // Crear el usuario doctor con los datos recibidos
     $doctor = User::create([
@@ -538,7 +538,6 @@ public function updateUser(Request $request, $id)
         'lastname' => 'sometimes|required|string|min:3|max:255',
         'phone'    => 'sometimes|required|string|size:12',
         'email'    => "sometimes|required|email|max:255|unique:users,email,$id",
-        'password' => 'sometimes|required|string|min:8|confirmed'
     ]);
 
     if ($validator->fails()) {
@@ -549,13 +548,7 @@ public function updateUser(Request $request, $id)
         ], 422);
     }
 
-
-    $data = $request->only(['name', 'lastname', 'phone', 'email']);
-    if ($request->filled('password')) {
-        $data['password'] = bcrypt($request->password);
-    }
-
-    $user->update($data);
+    $authUser->update($request->only(['name', 'lastname', 'phone', 'email']));
 
     return response()->json([
         'status'  => 'success',
@@ -592,7 +585,6 @@ public function updateMe(Request $request)
         'lastname' => 'sometimes|required|string|min:3|max:255',
         'phone'    => 'sometimes|required|string|size:12',
         'email'    => "sometimes|required|email|max:255|unique:users,email,$id",
-        'password' => 'sometimes|required|string|min:8|confirmed'
     ]);
 
     if ($validator->fails()) {
@@ -603,13 +595,7 @@ public function updateMe(Request $request)
         ], 422);
     }
 
-    
-    $data = $request->only(['name', 'lastname', 'phone', 'email']);
-    if ($request->filled('password')) {
-        $data['password'] = bcrypt($request->password);
-    }
-
-    $authUser->update($data);
+    $authUser->update($request->only(['name', 'lastname', 'phone', 'email']));
 
 
     return response()->json([

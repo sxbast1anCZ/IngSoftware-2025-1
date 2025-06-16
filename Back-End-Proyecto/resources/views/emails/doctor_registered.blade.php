@@ -205,11 +205,6 @@
 				</div>
 			</div>
 
-			<!-- Security Note -->
-			<div class="security-note">
-				Por seguridad, recomendamos cambiar su contraseña en el primer acceso al sistema.
-			</div>
-
 			<!-- CTA Button -->
 			<a href="http://localhost:4200/login" class="button">Acceder al Sistema</a>
 		</div>
