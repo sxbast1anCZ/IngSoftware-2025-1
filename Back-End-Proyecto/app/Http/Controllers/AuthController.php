@@ -104,8 +104,8 @@ public function registerDoctor(Request $request)
         ], 422);
     }
 
-    // Generar una contrasena aleatoria de 10 caracteres
-    $randomPassword = str()->random(10);
+    // Generar una contrasena aleatoria de 6 caracteres
+$randomPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6);
 
     // Crear el usuario doctor con los datos recibidos
     $doctor = User::create([
@@ -453,7 +453,7 @@ public function scheduleAppointment(Request $request)
 {
     // Obtener todos los usuarios excepto administradores (role_id = 1)
     $users = User::whereIn('role_id', [2, 3])
-                 ->select('name', 'lastname', 'rut', 'phone', 'email')
+                 ->select('name', 'lastname', 'rut', 'phone', 'email ', 'enabled')
                  ->get();
 
     return response()->json([
@@ -538,6 +538,7 @@ public function updateUser(Request $request, $id)
         'lastname' => 'sometimes|required|string|min:3|max:255',
         'phone'    => 'sometimes|required|string|size:12',
         'email'    => "sometimes|required|email|max:255|unique:users,email,$id",
+        'password' => 'sometimes|required|string|min:8|confirmed'
     ]);
 
     if ($validator->fails()) {
@@ -549,7 +550,12 @@ public function updateUser(Request $request, $id)
     }
 
 
-    $user->update($request->only(['name', 'lastname', 'phone', 'email']));
+    $data = $request->only(['name', 'lastname', 'phone', 'email']);
+    if ($request->filled('password')) {
+        $data['password'] = bcrypt($request->password);
+    }
+
+    $user->update($data);
 
     return response()->json([
         'status'  => 'success',
@@ -586,6 +592,7 @@ public function updateMe(Request $request)
         'lastname' => 'sometimes|required|string|min:3|max:255',
         'phone'    => 'sometimes|required|string|size:12',
         'email'    => "sometimes|required|email|max:255|unique:users,email,$id",
+        'password' => 'sometimes|required|string|min:8|confirmed'
     ]);
 
     if ($validator->fails()) {
@@ -597,8 +604,13 @@ public function updateMe(Request $request)
     }
 
     
+    $data = $request->only(['name', 'lastname', 'phone', 'email']);
+    if ($request->filled('password')) {
+        $data['password'] = bcrypt($request->password);
+    }
 
-    $authUser->update($request->only(['name', 'lastname', 'phone', 'email']));
+    $authUser->update($data);
+
 
     return response()->json([
         'status'  => 'success',

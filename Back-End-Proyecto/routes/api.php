@@ -34,8 +34,8 @@ Route::middleware(['is.auth', 'is.admin', 'is.enabled'])->group(function () {
 Route::middleware('auth:api')->group(function () {
     Route::get('/doctor/disponibilidad', [DoctorAvailabilityController::class, 'index']);
     Route::put('/doctor/disponibilidad', [DoctorAvailabilityController::class, 'update']);
-    Route::middleware('auth:api')->get('/doctor/citas', [DoctorAvailabilityController::class, 'citas']);
-    Route::middleware('auth:api')->put('/doctor/disponibilidad/desactivar', [DoctorAvailabilityController::class, 'desactivarBloques']);
-    Route::middleware('auth:api')->put('/doctor/disponibilidad/activar', [DoctorAvailabilityController::class, 'activarBloques']);
+    Route::get('/doctor/citas', [DoctorAvailabilityController::class, 'citas']);
+    Route::put('/doctor/disponibilidad/desactivar', [DoctorAvailabilityController::class, 'desactivarBloques']);
+    Route::put('/doctor/disponibilidad/activar', [DoctorAvailabilityController::class, 'activarBloques']);
 });
 
