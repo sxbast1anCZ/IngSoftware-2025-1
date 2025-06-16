@@ -449,11 +449,11 @@ public function scheduleAppointment(Request $request)
 
 
     
-    public function listUsers()
+public function listUsers()
 {
     // Obtener todos los usuarios excepto administradores (role_id = 1)
     $users = User::whereIn('role_id', [2, 3])
-                 ->select('name', 'lastname', 'rut', 'phone', 'email')
+                 ->select('id', 'name', 'lastname', 'rut', 'phone', 'email')
                  ->get();
 
     return response()->json([
@@ -461,6 +461,7 @@ public function scheduleAppointment(Request $request)
         'data'   => $users
     ]);
 }
+
 
 //revisar
      public function toggleUserStatus($id)
