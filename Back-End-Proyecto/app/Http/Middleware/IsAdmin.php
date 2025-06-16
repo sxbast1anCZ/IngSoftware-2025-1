@@ -25,7 +25,7 @@ class IsAdmin
         return response()->json([
             'status'  => false,
             'message' => 'No tienes permiso para acceder a este recurso',
-        ], 401);
+        ], 403);
     }
 }
 

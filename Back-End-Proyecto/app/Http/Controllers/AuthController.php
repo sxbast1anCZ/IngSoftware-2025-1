@@ -3,17 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use App\Models\DisponibilidadMedico;
+use Illuminate\Database\QueryException;
+
 
 class AuthController extends Controller
 {
-    
+
    // Metodo de register
 public function register (Request $request){
     // Validar los datos de entrada
@@ -100,7 +105,7 @@ public function registerDoctor(Request $request)
     }
 
     // Generar una contrasena aleatoria de 10 caracteres
-    $randomPassword = str()->random(10);
+    $randomPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6);
 
     // Crear el usuario doctor con los datos recibidos
     $doctor = User::create([
@@ -292,7 +297,7 @@ public function phpRule_ValidarRut($rut) {
         ])->FromUser($user);
 
         // Generar link de recuperación
-        $resetLink = 'https://www.youtube.com/watch?v=G2gYUVQrLzQ';
+        $resetLink = 'http://localhost:4200/reset-password';
 
         // Enviar email (con vista Blade) -> Blade es un motor de plantillas de Laravel
         Mail::send('emails.forgot_password', [
@@ -368,4 +373,246 @@ public function phpRule_ValidarRut($rut) {
             ], 500);
         }
     }
+
+
+    // Método para agendar una cita
+
+
+
+public function scheduleAppointment(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'doctor_id'     => 'required|exists:users,id',
+            'scheduled_at'  => 'required|date|after:now',
+            'reason'        => 'required|string|max:255',
+        ]);
+
+        $user = JWTAuth::parseToken()->authenticate();
+
+        if (!$user->isPatient()) {
+        return response()->json(['error' => 'Solo los pacientes pueden agendar citas.'], 403);
+    }
+
+        $fechaHora = Carbon::parse($validated['scheduled_at']);
+        $diaSemana = $fechaHora->dayOfWeekIso; // lunes = 1 ... domingo = 7
+        $hora      = $fechaHora->format('H:i:s');
+
+        // Buscar disponibilidad activa y válida
+        $disponibilidad = DisponibilidadMedico::where('user_id', $validated['doctor_id'])
+            ->where('dia_semana', $diaSemana)
+            ->where('activo', true)
+            ->whereRaw('? BETWEEN hora_inicio AND hora_fin', [$hora])
+            ->first();
+
+        if (!$disponibilidad) {
+            return response()->json([
+                'error' => 'El médico no está disponible en ese horario.',
+            ], 400);
+        }
+
+        // Verificar conflicto con otra cita
+        $conflicto = Appointment::where('doctor_id', $validated['doctor_id'])
+            ->where('scheduled_at', $validated['scheduled_at'])
+            ->exists();
+
+        if ($conflicto) {
+            return response()->json([
+                'error' => 'El horario en el que intentas agendar ya está ocupado.',
+            ], 409);
+        }
+
+        // Crear cita
+        $cita = Appointment::create([
+            'patient_id'     => $user->id,
+            'doctor_id'      => $validated['doctor_id'],
+            'scheduled_at'   => $validated['scheduled_at'],
+            'duration'       => 30,
+            'price'          => $disponibilidad->precio,
+            'payment_method' => 'pendiente',
+            'status'         => 'pendiente',
+            'reason'         => $validated['reason'],
+        ]);
+
+        return response()->json([
+            'message'    => 'Cita agendada exitosamente.',
+            'appointment' => $cita,
+        ], 201);
+
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error'   => 'Ocurrió un error inesperado al agendar la cita.',
+            'detalle' => $e->getMessage(),
+        ], 500);
+    }
+}
+
+
+    
+    public function listUsers()
+{
+    // Obtener todos los usuarios excepto administradores (role_id = 1)
+    $users = User::whereIn('role_id', [2, 3])
+                 ->select('name', 'lastname', 'rut', 'phone', 'email', 'enabled')
+                 ->get();
+
+    return response()->json([
+        'status' => 'success',
+        'data'   => $users
+    ]);
+}
+
+//revisar
+     public function toggleUserStatus($id)
+{
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Usuario no encontrado'
+        ], 404);
+    }
+
+    if ($user->role_id === 1) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'No se puede modificar el estado de un administrador'
+        ], 403);
+    }
+
+    $user->enabled = !$user->enabled;
+    $user->save();
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Estado de la cuenta actualizado correctamente',
+        'data'    => [
+            'id'      => $user->id,
+            'enabled' => $user->enabled
+        ]
+    ]);
+}
+
+//revisar
+public function updateUser(Request $request, $id)
+{
+  try {
+        $authUser = JWTAuth::parseToken()->authenticate();
+    } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Token expirado, por favor inicia sesión de nuevo',
+        ], 401);
+    } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Token inválido',
+        ], 401);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No autenticado',
+        ], 401);
+    }
+
+    // Solo admins (role_id = 1) o el mismo usuario pueden modificar
+    if ($authUser->role_id !== 1 && $authUser->id != $id) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No tienes permisos para modificar este usuario'
+        ], 403);
+    }
+
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Usuario no encontrado'
+        ], 404);
+    }
+
+    $validator = Validator::make($request->all(), [
+        'name'     => 'sometimes|required|string|min:3|max:255',
+        'lastname' => 'sometimes|required|string|min:3|max:255',
+        'phone'    => 'sometimes|required|string|size:12',
+        'email'    => "sometimes|required|email|max:255|unique:users,email,$id",
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Errores de validación',
+            'errors'  => $validator->errors()
+        ], 422);
+    }
+
+
+    $user->update($request->only(['name', 'lastname', 'phone', 'email']));
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Usuario actualizado correctamente',
+        'data'    => $user
+    ]);
+}
+
+public function updateMe(Request $request)
+{
+    try {
+        $authUser = JWTAuth::parseToken()->authenticate();
+    } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Token expirado, por favor inicia sesión de nuevo',
+        ], 401);
+    } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Token inválido',
+        ], 401);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No autenticado',
+        ], 401);
+    }
+
+    $id = $authUser->id;
+
+    $validator = Validator::make($request->all(), [
+        'name'     => 'sometimes|required|string|min:3|max:255',
+        'lastname' => 'sometimes|required|string|min:3|max:255',
+        'phone'    => 'sometimes|required|string|size:12',
+        'email'    => "sometimes|required|email|max:255|unique:users,email,$id",
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Errores de validación',
+            'errors'  => $validator->errors()
+        ], 422);
+    }
+
+    
+
+    $authUser->update($request->only(['name', 'lastname', 'phone', 'email']));
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Tu perfil fue actualizado correctamente',
+        'data'    => $authUser
+    ]);
+}
+
+
+public function me(Request $request)
+{
+    return response()->json([
+        'user' => $request->user()
+    ]);
+}
+
 }

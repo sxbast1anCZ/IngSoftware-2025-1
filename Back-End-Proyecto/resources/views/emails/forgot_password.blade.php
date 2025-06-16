@@ -196,8 +196,8 @@
 													<table class="button_block block-2" width="100%" border="0" cellpadding="10" cellspacing="0" role="presentation" style="mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
 														<tr>
 															<td class="pad">
-																<div class="alignment" align="center"><a href="https://youtu.be/lLWEXRAnQd0?si=JDFO74UWaNKuc0Bd" target="_blank" style="color:#04363d;text-decoration:none;"><!--[if mso]>
-<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"  href="https://youtu.be/lLWEXRAnQd0?si=JDFO74UWaNKuc0Bd"  style="height:52px;width:123px;v-text-anchor:middle;" arcsize="58%" fillcolor="#ff9f1c">
+																<div class="alignment" align="center"><a href="http://localhost:4200/reset-password" target="_blank" style="color:#04363d;text-decoration:none;"><!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"  href="http://localhost:4200/reset-password"  style="height:52px;width:123px;v-text-anchor:middle;" arcsize="58%" fillcolor="#ff9f1c">
 <v:stroke dashstyle="Solid" weight="0px" color="#FFBE98"/>
 <w:anchorlock/>
 <v:textbox inset="0px,0px,0px,0px">

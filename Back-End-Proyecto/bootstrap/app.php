@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\isAdmin;
 use App\Http\Middleware\IsAuthUser;
+use App\Http\Middleware\IsUserEnabled; 
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,9 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        IsAdmin::class;
-        IsAuthUser::class;
-        
+        $middleware->alias([
+            'is.admin' => IsAdmin::class,
+            'is.auth' => IsAuthUser::class,
+             'is.enabled' => IsUserEnabled::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
