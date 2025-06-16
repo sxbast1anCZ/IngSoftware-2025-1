@@ -6,6 +6,7 @@ use App\Models\DisponibilidadMedico;
 use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class DoctorAvailabilityController extends Controller
 {
@@ -182,6 +183,45 @@ class DoctorAvailabilityController extends Controller
 
         return response()->json(['message' => 'Bloques activados correctamente.']);
     }
+
+
+public function verDisponibilidadMedicoPorNombre(Request $request)
+{
+    $user = Auth::user();
+
+    // Verificar que el solicitante sea un paciente
+    if (!$user || $user->role_id !== 2) { 
+        return response()->json(['error' => 'Acceso no autorizado.'], 403);
+    }
+
+    // Validar el input
+    $request->validate([
+        'nombre'   => 'required|string',
+        'apellido' => 'required|string',
+    ]);
+
+    // Buscar al médico exacto por nombre y apellido
+    $medico = User::where('role_id', 3) // role_id 3 para médicos
+        ->where('name', $request->nombre)
+        ->where('lastname', $request->apellido)
+        ->first();
+
+    if (!$medico) {
+        return response()->json(['error' => 'Médico no encontrado.'], 404);
+    }
+
+    // Obtener disponibilidad activa
+    $disponibilidad = $medico->disponibilidades()
+        ->where('activo', true)
+        ->get(['dia_semana', 'hora_inicio', 'hora_fin']);
+
+    return response()->json([
+        'nombre'         => $medico->name,
+        'apellido'       => $medico->lastname,
+        'disponibilidad' => $disponibilidad
+    ]);
+}
+
 
 
 

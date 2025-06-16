@@ -37,5 +37,21 @@ Route::middleware('auth:api')->group(function () {
     Route::middleware('auth:api')->get('/doctor/citas', [DoctorAvailabilityController::class, 'citas']);
     Route::middleware('auth:api')->put('/doctor/disponibilidad/desactivar', [DoctorAvailabilityController::class, 'desactivarBloques']);
     Route::middleware('auth:api')->put('/doctor/disponibilidad/activar', [DoctorAvailabilityController::class, 'activarBloques']);
+    Route::middleware(['auth:api'])->post('/paciente/doctor/disponibilidad', [DoctorAvailabilityController::class, 'verDisponibilidadMedicoPorNombre']);
+
 });
+
+  /* Ejemplo del body de POSTMAN de "Activar Bloque
+    * Tipo de Usuario = Medico
+    * Body:
+    {
+  "bloques": [
+    {
+      "dia_semana": 1,
+      "hora_inicio": "08:00",
+      "hora_fin": "10:00"
+    }
+  ]
+}
+    */
 
