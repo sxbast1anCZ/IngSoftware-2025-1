@@ -75,6 +75,7 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(DisponibilidadMedico::class, 'user_id');
     }
 
+
     public function isPatient()
     {
         return $this->role_id === 2;

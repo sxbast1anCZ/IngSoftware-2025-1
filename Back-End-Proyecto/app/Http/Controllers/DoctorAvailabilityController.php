@@ -47,62 +47,74 @@ class DoctorAvailabilityController extends Controller
     /**
      * Actualizar disponibilidad del médico
      */
-    public function update(Request $request)
-{
-    $doctor = $this->getAuthenticatedDoctor();
+    public function crearDisponibilidadMedico(Request $request)
+    {
+        $doctor = $this->getAuthenticatedDoctor();
 
-    $request->validate([
-        'disponibilidad' => 'required|array',
-        'disponibilidad.*.dia_semana'   => 'required|integer|between:1,7',
-        'disponibilidad.*.hora_inicio'  => 'required|date_format:H:i',
-        'disponibilidad.*.hora_fin'     => 'required|date_format:H:i|after:disponibilidad.*.hora_inicio',
-        'disponibilidad.*.precio'       => 'required|numeric|min:0',
-    ]);
+    try {
+        $request->validate([
+            'disponibilidad' => 'required|array',
+            'disponibilidad.*.dia_semana'   => ['required', 'integer', 'between:1,7'],
+            'disponibilidad.*.hora_inicio'  => ['required', 'date_format:H:i'],
+            'disponibilidad.*.hora_fin'     => ['required', 'date_format:H:i'],
+            'disponibilidad.*.precio'       => ['required', 'numeric', 'min:0'],
+        ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        $errors = $e->errors();
+
+        foreach ($errors as $field => $messages) {
+            if (str_contains($field, 'dia_semana')) {
+                return response()->json(['message' => 'Por favor seleccione un día de semana válido. Considere que 1 es Lunes y 7 es Domingo.'], 422);
+            }
+
+            if (str_contains($field, 'hora_inicio') || str_contains($field, 'hora_fin')) {
+                return response()->json(['message' => 'Por favor ingrese un formato de hora válido (HH:MM)'], 422);
+            }
+        }
+
+        return response()->json(['message' => 'Error de validación', 'errores' => $errors], 422);
+    }
 
     foreach ($request->disponibilidad as $bloque) {
-        // Buscar disponibilidad existente
-        $disponibilidad = DisponibilidadMedico::where('user_id', $doctor->id)
-            ->where('dia_semana', $bloque['dia_semana'])
-            ->where('hora_inicio', $bloque['hora_inicio'])
-            ->where('hora_fin', $bloque['hora_fin'])
-            ->first();
-
-        // Verificar si hay citas en ese bloque (para evitar modificarlo si ya está reservado)
-        $tieneCitas = Appointment::where('doctor_id', $doctor->id)
-            ->whereDate('scheduled_at', '>=', now())
-            ->whereRaw('DAYOFWEEK(scheduled_at) = ?', [$bloque['dia_semana'] + 1])
-            ->whereTime('scheduled_at', '>=', $bloque['hora_inicio'])
-            ->whereTime('scheduled_at', '<', $bloque['hora_fin'])
-            ->exists();
-
-        if ($tieneCitas && $disponibilidad) {
+        if ($bloque['hora_inicio'] >= $bloque['hora_fin']) {
             return response()->json([
-                'message' => 'No puede modificar horarios con citas ya programadas. Primero cancele o reagende las citas afectadas.',
+                'message' => 'El intervalo horario que usted ha ingresado es inválido, por favor ingrese una hora de inicio válida.',
                 'bloque' => $bloque
             ], 422);
         }
 
-        if ($disponibilidad) {
-            // Actualiza el bloque existente
-            $disponibilidad->update([
-                'precio' => $bloque['precio'],
-                'activo' => true
-            ]);
-        } else {
-            // Crea nuevo bloque
-            DisponibilidadMedico::create([
-                'user_id'     => $doctor->id,
-                'dia_semana'  => $bloque['dia_semana'],
-                'hora_inicio' => $bloque['hora_inicio'],
-                'hora_fin'    => $bloque['hora_fin'],
-                'precio'      => $bloque['precio'],
-                'activo'      => true
-            ]);
+        // Validación de solapamiento de horarios existentes para ese día
+        $solapado = DisponibilidadMedico::where('user_id', $doctor->id)
+            ->where('dia_semana', $bloque['dia_semana'])
+            ->where('activo', true)
+            ->where(function ($query) use ($bloque) {
+                $query->where(function ($q) use ($bloque) {
+                    $q->where('hora_inicio', '<', $bloque['hora_fin'])
+                      ->where('hora_fin', '>', $bloque['hora_inicio']);
+                });
+            })->exists();
+
+        if ($solapado) {
+            return response()->json([
+                'message' => 'El horario ingresado se solapa con otro ya registrado. Por favor revise los bloques existentes.',
+                'bloque' => $bloque
+            ], 422);
         }
+
+        DisponibilidadMedico::create([
+            'user_id'     => $doctor->id,
+            'dia_semana'  => $bloque['dia_semana'],
+            'hora_inicio' => $bloque['hora_inicio'],
+            'hora_fin'    => $bloque['hora_fin'],
+            'precio'      => $bloque['precio'],
+            'activo'      => true
+        ]);
     }
 
-    return response()->json(['message' => 'Disponibilidad actualizada correctamente.']);
-}
+        return response()->json(['message' => 'Disponibilidad registrada correctamente.']);
+    }
+
+
 
 
 
