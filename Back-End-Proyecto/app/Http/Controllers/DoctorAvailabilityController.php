@@ -196,66 +196,84 @@ class DoctorAvailabilityController extends Controller
     }
 
     //El metodo desactiva los bloques de horarios que se le envien.
-    public function desactivarBloques(Request $request)
+        public function desactivarBloques(Request $request)
     {
         $doctor = $this->getAuthenticatedDoctor();
 
-        $request->validate([
-        'bloques' => 'required|array',
+    $validator = Validator::make($request->all(), [
+        'bloques' => 'required|array|min:1',
         'bloques.*.dia_semana'   => 'required|integer|between:1,7',
         'bloques.*.hora_inicio'  => 'required|date_format:H:i',
         'bloques.*.hora_fin'     => 'required|date_format:H:i|after:bloques.*.hora_inicio',
+    ], [
+        'bloques.required' => 'Por favor ingrese un usuario para editar.',
+        'bloques.array' => 'El formato de los bloques debe ser un arreglo.',
+        'bloques.min' => 'Debe especificar al menos un bloque para desactivar.',
+
+        'bloques.*.dia_semana.required' => 'El día de la semana es obligatorio.',
+        'bloques.*.dia_semana.integer'  => 'El día de la semana debe ser numérico.',
+        'bloques.*.dia_semana.between'  => 'El día de la semana debe estar entre 1 (Lunes) y 7 (Domingo).',
+
+        'bloques.*.hora_inicio.required' => 'La hora de inicio es obligatoria.',
+        'bloques.*.hora_inicio.date_format' => 'Formato inválido en la hora de inicio. Use HH:MM.',
+
+        'bloques.*.hora_fin.required' => 'La hora de fin es obligatoria.',
+        'bloques.*.hora_fin.date_format' => 'Formato inválido en la hora de fin. Use HH:MM.',
+        'bloques.*.hora_fin.after' => 'La hora de fin debe ser posterior a la hora de inicio.'
     ]);
 
-        foreach ($request->bloques as $bloque) {
-        // Verificar si hay citas en el horario que se intenta desactivar
-            $tieneCitas = Appointment::where('doctor_id', $doctor->id)
-                ->whereDate('scheduled_at', '>=', now())
-                ->whereRaw('DAYOFWEEK(scheduled_at) = ?', [$bloque['dia_semana'] + 1])
-                ->whereTime('scheduled_at', '>=', $bloque['hora_inicio'])
-                ->whereTime('scheduled_at', '<', $bloque['hora_fin'])
-                ->exists();
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => 'Errores de validación.',
+            'errors'  => $validator->errors()
+        ], 422);
+    }
 
-            if ($tieneCitas) {
-                return response()->json([
-                    'message' => 'No puede desactivar este bloque porque tiene citas programadas. Cancele o reagende primero.',
-                    'bloque_conflictivo' => $bloque
-            ],422);
-            }
-
-        // Desactivar el bloque si existe
-        DisponibilidadMedico::where('user_id', $doctor->id)
+    foreach ($request->bloques as $bloque) {
+        // Verificar si el bloque existe exactamente
+        $bloqueExistente = DisponibilidadMedico::where('user_id', $doctor->id)
             ->where('dia_semana', $bloque['dia_semana'])
             ->where('hora_inicio', $bloque['hora_inicio'])
             ->where('hora_fin', $bloque['hora_fin'])
-            ->update(['activo' => false]);
+            ->first();
+
+        if (!$bloqueExistente) {
+            $dias = [
+                1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles',
+                4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo'
+            ];
+            return response()->json([
+                'message' => 'Usted está intentando desactivar un bloque inexistente, por favor verifique que el médico tiene disponibilidad ese día.',
+                'dia_semana' => $dias[$bloque['dia_semana']] ?? 'Día inválido'
+            ], 404);
+        }
+
+        // Verificar si hay citas en el horario que se intenta desactivar
+        $tieneCitas = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('scheduled_at', '>=', now())
+            ->whereRaw('DAYOFWEEK(scheduled_at) = ?', [$bloque['dia_semana'] + 1])
+            ->whereTime('scheduled_at', '>=', $bloque['hora_inicio'])
+            ->whereTime('scheduled_at', '<', $bloque['hora_fin'])
+            ->exists();
+
+        if ($tieneCitas) {
+            return response()->json([
+                'message' => 'No puede desactivar este bloque porque tiene citas programadas. Cancele o reagende primero.',
+                'bloque_conflictivo' => $bloque
+            ], 422);
+        }
+
+        // Desactivar el bloque
+        $bloqueExistente->update(['activo' => false]);
     }
 
         return response()->json(['message' => 'Bloques desactivados correctamente.']);
     }
 
 
-    public function activarBloques(Request $request)
-    {
-        $doctor = $this->getAuthenticatedDoctor();
 
-    $request->validate([
-        'bloques' => 'required|array',
-        'bloques.*.dia_semana'   => 'required|integer|between:1,7',
-        'bloques.*.hora_inicio'  => 'required|date_format:H:i',
-        'bloques.*.hora_fin'     => 'required|date_format:H:i|after:bloques.*.hora_inicio',
-    ]);
 
-    foreach ($request->bloques as $bloque) {
-        DisponibilidadMedico::where('user_id', $doctor->id)
-            ->where('dia_semana', $bloque['dia_semana'])
-            ->where('hora_inicio', $bloque['hora_inicio'])
-            ->where('hora_fin', $bloque['hora_fin'])
-            ->update(['activo' => true]);
-    }
-
-        return response()->json(['message' => 'Bloques activados correctamente.']);
-    }
+    
 
 
 public function verDisponibilidadMedicoPorNombre(Request $request)
