@@ -48,7 +48,7 @@ class DoctorAvailabilityController extends Controller
 
 
 // Crea la disponibilidad del médico
-    public function crearDisponibilidadMedico(Request $request)
+        public function crearDisponibilidadMedico(Request $request)
     {
         $doctor = $this->getAuthenticatedDoctor();
 
@@ -57,7 +57,20 @@ class DoctorAvailabilityController extends Controller
         'disponibilidad.*.dia_semana' => ['required', 'integer', 'between:1,7'],
         'disponibilidad.*.hora_inicio' => ['required', 'date_format:H:i'],
         'disponibilidad.*.hora_fin' => ['required', 'date_format:H:i'],
-        'disponibilidad.*.precio' => ['required', 'numeric', 'min:0', 'max:99999999999999999.99'],
+        'disponibilidad.*.precio' => [
+            'required',
+            function ($attribute, $value, $fail) { //Esta validación fue horrible, pero lo que hace es que convierte el int a texto, similiar al parseInt de
+                $precioStr = (string) $value; //Java para que lo capturen las validaciones del texto.
+
+                if (!ctype_digit($precioStr)) {
+                    return $fail('El precio debe ser un número entero válido en pesos chilenos dentro del rango admitido (menos de $9.999.999 CLP).');
+                }
+
+                if (strlen($precioStr) > 7) {
+                    return $fail('El precio no puede superar los $9.999.999 CLP.');
+                }
+            }
+        ],
     ], [
         'disponibilidad.required' => 'Por favor ingrese una disponibilidad del médico.',
         'disponibilidad.array' => 'El formato de disponibilidad debe ser un arreglo.',
@@ -74,7 +87,6 @@ class DoctorAvailabilityController extends Controller
         'disponibilidad.*.hora_fin.date_format' => 'Por favor ingrese un formato de hora válido (HH:MM).',
 
         'disponibilidad.*.precio.required' => 'El precio es obligatorio.',
-        'disponibilidad.*.precio.numeric' => 'El precio debe ser numérico.',
     ]);
 
     if ($validator->fails()) {
@@ -85,6 +97,13 @@ class DoctorAvailabilityController extends Controller
     }
 
     foreach ($request->disponibilidad as $bloque) {
+        $precioStr = (string) $bloque['precio'];
+        if (!ctype_digit($precioStr) || strlen($precioStr) > 7) {
+            return response()->json([
+                'message' => 'Precio fuera de rango o en formato inválido.',
+            ], 422);
+        }
+
         $existe = DisponibilidadMedico::where('user_id', $doctor->id)
             ->where('dia_semana', $bloque['dia_semana'])
             ->exists();
@@ -100,13 +119,13 @@ class DoctorAvailabilityController extends Controller
             'dia_semana' => $bloque['dia_semana'],
             'hora_inicio' => $bloque['hora_inicio'],
             'hora_fin' => $bloque['hora_fin'],
-            'precio' => $bloque['precio'],
+            'precio' => (int) $bloque['precio'], // guardado en pesos
             'activo' => true
         ]);
     }
 
-    return response()->json(['message' => 'Disponibilidad registrada correctamente.']);
-}
+        return response()->json(['message' => 'Disponibilidad registrada correctamente.']);
+    }
 
 
 
@@ -115,8 +134,8 @@ class DoctorAvailabilityController extends Controller
     /**
      * Actualizar disponibilidad del médico
      */
-    public function actualizarDisponibilidadMedico(Request $request)
-{
+        public function actualizarDisponibilidadMedico(Request $request)
+    {
     $doctor = $this->getAuthenticatedDoctor();
 
     $validator = Validator::make($request->all(), [
@@ -128,8 +147,11 @@ class DoctorAvailabilityController extends Controller
             'required',
             'numeric',
             'min:0',
-            'max:99999999999999999.99',
-            'max_digits:20'
+            function ($attribute, $value, $fail) {
+                if (strlen((string)$value) > 20) {
+        $fail('El límite de caracteres del precio no puede ser superado.');
+    }
+}
     ],
 ], [
     'disponibilidad.required' => 'Por favor ingrese una disponibilidad del médico para actualizar.',
@@ -176,7 +198,7 @@ class DoctorAvailabilityController extends Controller
     return response()->json([
         'message' => 'Disponibilidad actualizada correctamente.'
     ]);
-}
+    }
 
 
 
