@@ -136,7 +136,7 @@ class DoctorAvailabilityController extends Controller
      */
         public function actualizarDisponibilidadMedico(Request $request)
     {
-    $doctor = $this->getAuthenticatedDoctor();
+        $doctor = $this->getAuthenticatedDoctor();
 
     $validator = Validator::make($request->all(), [
         'disponibilidad' => 'required|array|min:1',
@@ -145,24 +145,30 @@ class DoctorAvailabilityController extends Controller
         'disponibilidad.*.hora_fin' => ['required', 'date_format:H:i'],
         'disponibilidad.*.precio' => [
             'required',
-            'numeric',
-            'min:0',
             function ($attribute, $value, $fail) {
-                if (strlen((string)$value) > 20) {
-        $fail('El límite de caracteres del precio no puede ser superado.');
-    }
-}
-    ],
-], [
-    'disponibilidad.required' => 'Por favor ingrese una disponibilidad del médico para actualizar.',
-    'disponibilidad.*.dia_semana.between' => 'Por favor seleccione un día de semana válido. Considere que 1 es Lunes y 7 es Domingo.',
-    'disponibilidad.*.hora_inicio.date_format' => 'Por favor ingrese un formato de hora válido (HH:MM).',
-    'disponibilidad.*.hora_fin.date_format' => 'Por favor ingrese un formato de hora válido (HH:MM).',
-    'disponibilidad.*.hora_fin.after' => 'El intervalo horario que usted ha ingresado es inválido, por favor ingrese una hora de inicio válida.',
-    'disponibilidad.*.precio.numeric' => 'El precio debe ser un número válido.',
-    'disponibilidad.*.precio.max_digits' => 'El precio no puede superar los 20 caracteres.',
-]);
+                $precioStr = (string) $value;
 
+                if (str_contains(strtolower($precioStr), 'e')) {
+                    return $fail('El precio ingresado es demasiado grande o inválido.');
+                }
+
+                if (!ctype_digit($precioStr)) {
+                    return $fail('El precio debe ser un número entero válido en pesos chilenos.');
+                }
+
+                if (strlen($precioStr) > 7) {
+                    return $fail('El precio no puede superar los $9.999.999 CLP.');
+                }
+            }
+        ],
+    ], [
+        'disponibilidad.required' => 'Por favor ingrese una disponibilidad del médico para actualizar.',
+        'disponibilidad.*.dia_semana.between' => 'Por favor seleccione un día de semana válido. Considere que 1 es Lunes y 7 es Domingo.',
+        'disponibilidad.*.hora_inicio.date_format' => 'Por favor ingrese un formato de hora válido (HH:MM).',
+        'disponibilidad.*.hora_fin.date_format' => 'Por favor ingrese un formato de hora válido (HH:MM).',
+        'disponibilidad.*.hora_fin.after' => 'El intervalo horario que usted ha ingresado es inválido, por favor ingrese una hora de inicio válida.',
+        'disponibilidad.*.precio.required' => 'El precio es obligatorio.',
+    ]);
 
     if ($validator->fails()) {
         return response()->json([
@@ -172,6 +178,18 @@ class DoctorAvailabilityController extends Controller
     }
 
     foreach ($request->disponibilidad as $bloque) {
+        // Validación redundante de seguridad (por si el JSON ya vino alterado)
+        $precioStr = (string) $bloque['precio'];
+        if (
+            str_contains(strtolower($precioStr), 'e') ||
+            !ctype_digit($precioStr) ||
+            strlen($precioStr) > 7
+        ) {
+            return response()->json([
+                'message' => 'El precio ingresado es inválido o supera el límite permitido.',
+            ], 422);
+        }
+
         $disponibilidadExistente = DisponibilidadMedico::where('user_id', $doctor->id)
             ->where('dia_semana', $bloque['dia_semana'])
             ->first();
@@ -186,11 +204,10 @@ class DoctorAvailabilityController extends Controller
             ], 404);
         }
 
-        // Actualizar directamente el bloque del día
         $disponibilidadExistente->update([
             'hora_inicio' => $bloque['hora_inicio'],
             'hora_fin'    => $bloque['hora_fin'],
-            'precio'      => $bloque['precio'],
+            'precio'      => (int) $bloque['precio'], // Guardado como unsignedBigInteger
             'activo'      => true
         ]);
     }
@@ -199,6 +216,8 @@ class DoctorAvailabilityController extends Controller
         'message' => 'Disponibilidad actualizada correctamente.'
     ]);
     }
+
+
 
 
 
