@@ -453,10 +453,10 @@ public function scheduleAppointment(Request $request)
     public function listUsers() {
     // Verificar si existen clientes
     $clientesExisten = User::where('role_id', 2)->exists();
-
-    // Obtener todos los usuarios (clientes y médicos)
+    
+    // Obtener todos los usuarios excepto administradores (role_id = 1)
     $users = User::whereIn('role_id', [2, 3])
-                ->select('name', 'lastname', 'rut', 'phone', 'email', 'enabled')
+                ->select('id', 'name', 'lastname', 'rut', 'phone', 'email', 'enabled')
                 ->get();
 
     // Respuesta con advertencia si no hay clientes
@@ -467,7 +467,7 @@ public function scheduleAppointment(Request $request)
     ]);
 }
 
-
+//revisar
      public function toggleUserStatus($id)
 {
     $user = User::find($id);
