@@ -18,7 +18,7 @@ return new class extends Migration
                   ->comment('1=Lunes, 2=Martes, 3=Miércoles, 4=Jueves, 5=Viernes, 6=Sábado, 7=Domingo');
             $table->time('hora_inicio');
             $table->time('hora_fin');
-            $table->decimal('precio', 8, 2); 
+            $table->decimal('precio', 20, 2); 
             $table->boolean('activo')->default(true);
             $table->timestamps();
 
