@@ -243,7 +243,7 @@ class DoctorAvailabilityController extends Controller
                 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo'
             ];
             return response()->json([
-                'message' => 'Usted está intentando desactivar un bloque inexistente, por favor verifique que el médico tiene disponibilidad ese día.',
+                'message' => 'Usted está intentando desactivar un bloque inexistente, por favor verifique que el médico tiene disponibilidad ese día y en ese horario.',
                 'dia_semana' => $dias[$bloque['dia_semana']] ?? 'Día inválido'
             ], 404);
         }
@@ -269,6 +269,55 @@ class DoctorAvailabilityController extends Controller
 
         return response()->json(['message' => 'Bloques desactivados correctamente.']);
     }
+
+    public function activarBloques(Request $request)
+    {
+        $doctor = $this->getAuthenticatedDoctor();
+
+    $validator = Validator::make($request->all(), [
+        'bloques' => 'required|array|min:1',
+        'bloques.*.dia_semana'   => 'required|integer|between:1,7',
+        'bloques.*.hora_inicio'  => 'required|date_format:H:i',
+        'bloques.*.hora_fin'     => 'required|date_format:H:i|after:bloques.*.hora_inicio',
+    ], [
+        'bloques.required' => 'Por favor ingrese un bloque para activar.',
+        'bloques.*.dia_semana.between' => 'Por favor seleccione un día de semana válido. Considere que 1 es Lunes y 7 es Domingo.',
+        'bloques.*.hora_inicio.date_format' => 'Por favor ingrese un formato de hora válido (HH:MM).',
+        'bloques.*.hora_fin.date_format' => 'Por favor ingrese un formato de hora válido (HH:MM).',
+        'bloques.*.hora_fin.after' => 'El intervalo horario que usted ha ingresado es inválido, por favor ingrese una hora de inicio válida.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => 'Errores de validación.',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    foreach ($request->bloques as $bloque) {
+        // Verificar que el bloque exista
+        $bloqueExistente = DisponibilidadMedico::where('user_id', $doctor->id)
+            ->where('dia_semana', $bloque['dia_semana'])
+            ->where('hora_inicio', $bloque['hora_inicio'])
+            ->where('hora_fin', $bloque['hora_fin'])
+            ->first();
+
+        if (!$bloqueExistente) {
+            $dias = [
+                1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles',
+                4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo'
+            ];
+            return response()->json([
+                'message' => 'Usted está intentando activar un bloque inexistente. Por favor verifique que el médico tiene disponibilidad ese día (' . ($dias[$bloque['dia_semana']] ?? 'Desconocido') . ').',
+            ], 404);
+        }
+
+        $bloqueExistente->update(['activo' => true]);
+    }
+
+        return response()->json(['message' => 'Bloques activados correctamente.']);
+    }
+
 
 
 

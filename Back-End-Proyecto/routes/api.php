@@ -37,7 +37,7 @@ Route::middleware('auth:api')->group(function () {
     Route::put('/doctor/disponibilidad', [DoctorAvailabilityController::class, 'actualizarDisponibilidadMedico']);
     Route::middleware('auth:api')->get('/doctor/citas', [DoctorAvailabilityController::class, 'citas']);
     Route::put('/doctor/disponibilidad/desactivar', [DoctorAvailabilityController::class, 'desactivarBloques']);
-    Route::middleware('auth:api')->put('/doctor/disponibilidad/activar', [DoctorAvailabilityController::class, 'activarBloques']);
+    Route::put('/doctor/disponibilidad/activar', [DoctorAvailabilityController::class, 'activarBloques']);
     Route::middleware(['auth:api'])->post('/paciente/doctor/disponibilidad', [DoctorAvailabilityController::class, 'verDisponibilidadMedicoPorNombre']);
 
 });
