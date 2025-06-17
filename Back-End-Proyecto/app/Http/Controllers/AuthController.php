@@ -105,7 +105,7 @@ public function registerDoctor(Request $request)
     }
 
     // Generar una contrasena aleatoria de 10 caracteres
-    $randomPassword = str()->random(10);
+    $randomPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6);
 
     // Crear el usuario doctor con los datos recibidos
     $doctor = User::create([
@@ -262,8 +262,7 @@ public function phpRule_ValidarRut($rut) {
     }
 
     // Envío de email con link de recuperación de contraseña
-    public function forgotPassword(Request $request)
-    {
+    public function forgotPassword(Request $request){
         // Validar los datos de entrada
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email|max:255|exists:users,email',
@@ -316,8 +315,7 @@ public function phpRule_ValidarRut($rut) {
     }
 
     // Cambiar contraseña usando token
-    public function resetPassword(Request $request)
-    {
+    public function resetPassword(Request $request){
         // Validar los datos de entrada
         $request->validate([
             'email'    => 'required|string|email|max:255',
@@ -372,7 +370,7 @@ public function phpRule_ValidarRut($rut) {
                 'errors'  => $e->getMessage(),
             ], 500);
         }
-    }
+}
 
 
     // Método para agendar una cita
@@ -448,20 +446,26 @@ public function scheduleAppointment(Request $request)
 }
 
 
+//Metodo para obtener la lista de usuarios
+// Este método devuelve una lista de usuarios (clientes y médicos) con advertencia si no hay clientes
+// Solo los administradores pueden acceder a esta ruta
+// Devuelve un JSON con el estado, mensaje y datos de los usuarios  
+    public function listUsers() {
+    // Verificar si existen clientes
+    $clientesExisten = User::where('role_id', 2)->exists();
     
-public function listUsers()
-{
     // Obtener todos los usuarios excepto administradores (role_id = 1)
     $users = User::whereIn('role_id', [2, 3])
-                 ->select('id', 'name', 'lastname', 'rut', 'phone', 'email')
-                 ->get();
+                ->select('id', 'name', 'lastname', 'rut', 'phone', 'email', 'enabled')
+                ->get();
 
+    // Respuesta con advertencia si no hay clientes
     return response()->json([
-        'status' => 'success',
-        'data'   => $users
+        'status'  => 'success',
+        'message' => $clientesExisten ? null : 'Advertencia: No hay clientes para mostrar.',
+        'data'    => $users
     ]);
 }
-
 
 //revisar
      public function toggleUserStatus($id)
