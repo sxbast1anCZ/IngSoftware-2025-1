@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DoctorAvailabilityController;
+use App\Http\Controllers\SpecialtyController;
 
 
 //Rutas sin autenticación, son públicas
@@ -12,6 +13,7 @@ Route::post('register', [AuthController::class, 'register']);
 Route::post('password/forgot', [AuthController::class, 'forgotPassword']);
 Route::post('password/reset', [AuthController::class, 'resetPassword']);
 Route::post('register2', [AuthController::class, 'registerDoctor']);
+Route::get('/especialidades/medicos', [SpecialtyController::class, 'obtenerEspecialidadesMedicos']);
 
 //Rutas para generar citas médicas
 Route::middleware('auth:api')->post('/appointments', [AuthController::class, 'scheduleAppointment']);
@@ -40,6 +42,7 @@ Route::middleware('auth:api')->group(function () {
     Route::put('/doctor/disponibilidad/activar', [DoctorAvailabilityController::class, 'activarBloques']);
     Route::middleware(['auth:api'])->post('/paciente/doctor/disponibilidad', [DoctorAvailabilityController::class, 'verDisponibilidadMedicoPorNombre']);
 
+  
 });
 
   /* Ejemplo del body de POSTMAN de "Activar Bloque

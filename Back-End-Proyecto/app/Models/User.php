@@ -21,7 +21,7 @@ class User extends Authenticatable implements JWTSubject
         //Añadir todos los campos que se crearon en las tablas de usuario
         'name',
         'lastname',
-        'profession',
+        'specialty_id',
         'role_id',
         'rut',
         'phone',
@@ -95,6 +95,11 @@ public function isDoctor()
 public function citasMedicas()
 {
     return $this->hasMany(Appointment::class, 'doctor_id');
+}
+
+public function specialty()
+{
+    return $this->belongsTo(Specialty::class);
 }
 
 

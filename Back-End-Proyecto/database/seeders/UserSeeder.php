@@ -29,7 +29,6 @@ class UserSeeder extends Seeder
         User::create([
             'name' => 'Cristian',
             'lastname' => 'Alvarez',
-            'profession' => 'Dentista',
             'role_id' => 3,
             'rut' => '209723735',
             'phone' => '+56966699642',
