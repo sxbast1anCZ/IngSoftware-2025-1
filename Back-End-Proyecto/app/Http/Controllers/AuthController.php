@@ -382,80 +382,6 @@ public function phpRule_ValidarRut($rut) {
         }
 }
 
-
-    // Método para agendar una cita
-
-
-
-public function scheduleAppointment(Request $request)
-{
-    try {
-        $validated = $request->validate([
-            'doctor_id'     => 'required|exists:users,id',
-            'scheduled_at'  => 'required|date|after:now',
-            'reason'        => 'required|string|max:255',
-        ]);
-
-        $user = JWTAuth::parseToken()->authenticate();
-
-        if (!$user->isPatient()) {
-        return response()->json(['error' => 'Solo los pacientes pueden agendar citas.'], 403);
-    }
-
-        $fechaHora = Carbon::parse($validated['scheduled_at']);
-        $diaSemana = $fechaHora->dayOfWeekIso; // lunes = 1 ... domingo = 7
-        $hora      = $fechaHora->format('H:i:s');
-
-        // Buscar disponibilidad activa y válida
-        $disponibilidad = DisponibilidadMedico::where('user_id', $validated['doctor_id'])
-            ->where('dia_semana', $diaSemana)
-            ->where('activo', true)
-            ->whereRaw('? BETWEEN hora_inicio AND hora_fin', [$hora])
-            ->first();
-
-        if (!$disponibilidad) {
-            return response()->json([
-                'error' => 'El médico no está disponible en ese horario.',
-            ], 400);
-        }
-
-        // Verificar conflicto con otra cita
-        $conflicto = Appointment::where('doctor_id', $validated['doctor_id'])
-            ->where('scheduled_at', $validated['scheduled_at'])
-            ->exists();
-
-        if ($conflicto) {
-            return response()->json([
-                'error' => 'El horario en el que intentas agendar ya está ocupado.',
-            ], 409);
-        }
-
-        // Crear cita
-        $cita = Appointment::create([
-            'patient_id'     => $user->id,
-            'doctor_id'      => $validated['doctor_id'],
-            'scheduled_at'   => $validated['scheduled_at'],
-            'duration'       => 30,
-            'price'          => $disponibilidad->precio,
-            'payment_method' => 'pendiente',
-            'status'         => 'pendiente',
-            'reason'         => $validated['reason'],
-        ]);
-
-        return response()->json([
-            'message'    => 'Cita agendada exitosamente.',
-            'appointment' => $cita,
-        ], 201);
-
-    } catch (\Throwable $e) {
-        return response()->json([
-            'error'   => 'Ocurrió un error inesperado al agendar la cita.',
-            'detalle' => $e->getMessage(),
-        ], 500);
-    }
-}
-
-
 //Metodo para obtener la lista de usuarios
 // Este método devuelve una lista de usuarios (clientes y médicos) con advertencia si no hay clientes
 // Solo los administradores pueden acceder a esta ruta
@@ -478,6 +404,7 @@ public function listUsers() {
         'data'    => $users
     ]);
 }
+
 
 //revisar
      public function toggleUserStatus($id)

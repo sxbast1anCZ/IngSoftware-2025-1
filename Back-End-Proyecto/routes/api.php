@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DoctorAvailabilityController;
 use App\Http\Controllers\SpecialtyController;
+use App\Http\Controllers\AppointmentController;
 
 
 //Rutas sin autenticación, son públicas
@@ -13,10 +14,15 @@ Route::post('register', [AuthController::class, 'register']);
 Route::post('password/forgot', [AuthController::class, 'forgotPassword']);
 Route::post('password/reset', [AuthController::class, 'resetPassword']);
 Route::post('register2', [AuthController::class, 'registerDoctor']);
+
+//Rutas de listado para FRONT END
 Route::get('/especialidades/medicos', [SpecialtyController::class, 'obtenerEspecialidadesMedicos']);
+Route::get('/medicos/publicos', [AuthController::class, 'listarMedicosPublicos']);
+Route::get('/frontend/medicos', [AppointmentController::class, 'listarMedicosPublicos']);
+
 
 //Rutas para generar citas médicas
-Route::middleware('auth:api')->post('/appointments', [AuthController::class, 'scheduleAppointment']);
+Route::middleware('auth:api')->post('/appointments', [AppointmentController::class, 'scheduleAppointment']);
 Route::middleware('auth:api')->get('/appointments', [AuthController::class, 'getAppointments']);
 
 // Rutas protegidas para usuarios autenticados y habilitados

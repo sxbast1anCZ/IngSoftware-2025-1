@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
-
+use Illuminate\Http\JsonResponse;
 
 class DoctorAvailabilityController extends Controller
 {
@@ -221,20 +221,52 @@ class DoctorAvailabilityController extends Controller
 
 
 
-    /**
-     * Ver citas futuras del médico
+    /*
+     * Ver citas futuras del médico 
      */
-    public function citas()
+        public function citas()
     {
-        $doctor = $this->getAuthenticatedDoctor();
+    $doctor = $this->getAuthenticatedDoctor();
 
-        $citas = $doctor->citasMedicas()
-            ->where('scheduled_at', '>=', now())
-            ->orderBy('scheduled_at')
-            ->get();
-
-        return response()->json(['citas' => $citas]);
+    if (!$doctor) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Solo los médicos pueden ver esta información.'
+        ], 403);
     }
+
+    $citas = $doctor->citasMedicas()
+        ->with('patient')
+        ->whereDate('scheduled_at', '>=', now()->toDateString())
+        ->orderBy('scheduled_at')
+        ->get();
+
+    if ($citas->isEmpty()) {
+        return response()->json([
+            'status' => 'info',
+            'message' => 'Este doctor no cuenta con ninguna cita agendada.'
+        ], 200);
+    }
+
+    $resultado = $citas->map(function ($cita) {
+        return [
+            'paciente'        => $cita->patient->name . ' ' . $cita->patient->lastname,
+            'dia_semana'      => \Carbon\Carbon::parse($cita->scheduled_at)->isoFormat('dddd'),
+            'hora_inicio'     => \Carbon\Carbon::parse($cita->scheduled_at)->format('H:i'),
+            'hora_fin'        => \Carbon\Carbon::parse($cita->scheduled_at)->addMinutes($cita->duration)->format('H:i'),
+            'razon_consulta'  => $cita->reason,
+        ];
+    });
+
+    return response()->json([
+        'status' => 'success',
+        'citas'  => $resultado
+    ]);
+    }
+
+
+
+
 
     //El metodo desactiva los bloques de horarios que se le envien.
         public function desactivarBloques(Request $request)
@@ -402,6 +434,54 @@ public function verDisponibilidadMedicoPorNombre(Request $request)
         'disponibilidad' => $disponibilidad
     ]);
 }
+//Método para obtener por bloques, el nombre del doctor junto al horario que le corresponde en la semana
+//Este método devuelve una advertencia si un médico no tiene disponibilidad existente
+//Ruta PÚBLICA, sin autenticación pensada para Front-End
+//Este método devuelve con JSON con el nombre y apellido del doctor, junto con su horario por bloque
+    public function listarDisponibilidadPublica(): JsonResponse
+    {
+        // Obtener médicos con bloques activos
+        $medicos = User::where('role_id', 3)
+        ->whereHas('disponibilidades', function ($query) {
+            $query->where('activo', true);
+        })
+        ->with(['disponibilidades' => function ($query) {
+            $query->where('activo', true)->orderBy('dia_semana')->orderBy('hora_inicio');
+        }])
+        ->get();
+
+    if ($medicos->isEmpty()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No hay médicos con disponibilidad registrada aún.'
+        ], 404);
+    }
+
+    $dias = [
+        1 => 'Lunes',
+        2 => 'Martes',
+        3 => 'Miércoles',
+        4 => 'Jueves',
+        5 => 'Viernes',
+        6 => 'Sábado',
+        7 => 'Domingo',
+    ];
+
+    $respuesta = $medicos->map(function ($medico) use ($dias) {
+        return [
+            'doctor' => 'Dr ' . $medico->name . ' ' . $medico->lastname,
+            'bloques' => $medico->disponibilidades->map(function ($bloque) use ($dias) {
+                return $dias[$bloque->dia_semana] . ', ' . substr($bloque->hora_inicio, 0, 5) . ' - ' . substr($bloque->hora_fin, 0, 5);
+            })->toArray(),
+        ];
+    });
+
+    return response()->json([
+        'status' => 'success',
+        'data' => $respuesta
+    ]);
+    }
+
 
 
 

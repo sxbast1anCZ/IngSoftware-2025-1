@@ -57,8 +57,8 @@ class DoctorSeeder extends Seeder
                 'phone'        => '+56900000000',
                 'email'        => strtolower(str_replace('áéíóúñ', 'aeioun', $nombre)) . '.' .
                                   strtolower(str_replace('áéíóúñ', 'aeioun', $apellido)) . '@clinica.com',
-                'password'     => bcrypt(Str::random(10)),
-                'role_id'      => 3,
+                'password'     => bcrypt(123456),
+                'role_id'      => 2,
                 'enabled'      => true,
                 'specialty_id' => $especialidadesMap[$especialidad],
             ]);

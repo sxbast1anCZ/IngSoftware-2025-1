@@ -78,7 +78,7 @@ class User extends Authenticatable implements JWTSubject
 
     public function isPatient()
     {
-        return $this->role_id === 2;
+        return $this->role_id === 3;
     }
     
 
@@ -87,7 +87,7 @@ class User extends Authenticatable implements JWTSubject
 
 public function isDoctor()
 {
-    return $this->role_id === 3;
+    return $this->role_id === 2;
 }
 
 
