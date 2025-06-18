@@ -14,7 +14,8 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use App\Models\DisponibilidadMedico;
 use Illuminate\Database\QueryException;
-
+use Illuminate\Support\Facades\Log;
+use App\Models\Specialty;
 
 class AuthController extends Controller
 {
@@ -80,14 +81,14 @@ public function registerDoctor(Request $request)
 {
     // Validar los datos de entrada
     $validator = Validator::make($request->all(), [
-        'name'       => 'required|string|min:3|max:255',
-        'lastname'   => 'required|string|min:3|max:255',
-        'profession' => 'required|string|max:255',
-        'rut'        => 'required|string|min:9|max:10|unique:users',
-        'phone'      => 'required|string|size:12',
-        'email'      => 'required|string|email|max:255|unique:users',
+        'name'         => 'required|string|min:3|max:255',
+        'lastname'     => 'required|string|min:3|max:255',
+        'rut'          => 'required|string|min:9|max:10|unique:users',
+        'phone'        => 'required|string|size:12',
+        'email'        => 'required|string|email|max:255|unique:users',
+        'specialty_id' => 'sometimes|exists:specialties,id',
     ]);
-      // Si la validacion falla, devolver errores
+    // Si la validacion falla, devolver errores
     if ($validator->fails()) {
         return response()->json([
             'status'  => 'error',
@@ -95,7 +96,7 @@ public function registerDoctor(Request $request)
             'errors'  => $validator->errors(),
         ], 422);
     }
-       // Validar que el RUT sea correcto 
+    // Validar que el RUT sea correcto 
     $rutValidation = $this->phpRule_ValidarRut($request->rut);
     if ($rutValidation['error']) {
         return response()->json([
@@ -104,37 +105,47 @@ public function registerDoctor(Request $request)
         ], 422);
     }
 
-    // Generar una contrasena aleatoria de 10 caracteres
+    // Determinar la especialidad: usar la proporcionada o la por defecto (Medicina General, ID 1)
+    $specialtyId = $request->specialty_id ?? 1; // ID 1 corresponde a Medicina General
+
+    // Generar una contrasena aleatoria de 6 caracteres
     $randomPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6);
 
     // Crear el usuario doctor con los datos recibidos
     $doctor = User::create([
-        'name'       => $request->name,
-        'lastname'   => $request->lastname,
-        'rut'        => $request->rut,
-        'phone'      => $request->phone,
-        'email'      => $request->email,
-        'profession' => $request->profession,
-        'password'   => bcrypt($randomPassword),
-        'role_id'    => 3, // rol id de medico 
-        'enable'     => true,
+        'name'         => $request->name,
+        'lastname'     => $request->lastname,
+        'rut'          => $request->rut,
+        'phone'        => $request->phone,
+        'email'        => $request->email,
+        'password'     => bcrypt($randomPassword),
+        'role_id'      => 2, // Rol de médico (ID 2)
+        'specialty_id' => $specialtyId,
+        'enabled'      => true,
     ]);
 
-    // Enviar correo al doctor con su contrasena generada
+    try {
+        // Enviar correo al doctor con su contrasena generada
+        Mail::send('emails.doctor_registered', [
+            'user'     => $doctor,
+            'password' => $randomPassword,
+        ], function ($message) use ($doctor) {
+            $message->to($doctor->email);
+            $message->subject('Registro de Cuenta de Médico');
+        });
 
-    Mail::send('emails.doctor_registered', [
-        'user'     => $doctor,
-        'password' => $randomPassword,
-    ], function ($message) use ($doctor) {
-        $message->to($doctor->email);
-        $message->subject('Registro de Cuenta de Medico');
-    });
+        $emailEnviado = true;
+    } catch (\Exception $e) {
+        Log::error('Error al enviar correo: ' . $e->getMessage());
+        $emailEnviado = false;
+    }
 
     // Respuesta exitosa con los datos del doctor creado
-    
     return response()->json([
         'status'  => 'success',
-        'message' => 'Medico registrado correctamente. Contraseña enviada por correo.',
+        'message' => $emailEnviado 
+            ? 'Médico registrado correctamente. Contraseña enviada por correo.'
+            : 'Médico registrado correctamente, pero hubo un problema al enviar el correo.',
         'data'    => $doctor,
     ], 201);
 }
