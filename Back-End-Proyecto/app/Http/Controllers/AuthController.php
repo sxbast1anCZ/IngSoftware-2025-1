@@ -205,14 +205,14 @@ public function phpRule_ValidarRut($rut) {
     // Validar los datos de entrada
     $validator = Validator::make($request->all(), [
         'email'    => 'required|string|email|max:255',
-        'password' => 'required|string|size:6',
+        'password' => 'required|string|min:6',  // Cambié 'size:6' por 'min:6' para mayor flexibilidad
     ]);
 
     // Si la validación falla, devolver un error
     if ($validator->fails()) {
         return response()->json([
             'status'  => 'error',
-            'message' => 'Validation error',
+            'message' => 'Error de validación',  // Mantener mensajes en español
             'errors'  => $validator->errors(),
         ], 422);
     }
@@ -221,45 +221,55 @@ public function phpRule_ValidarRut($rut) {
     $credentials = $request->only('email', 'password');
 
     try {
+        // Verificar primero si el usuario existe y está habilitado
+        $user = User::where('email', $request->email)->first();
+        
+        // Si el usuario no existe, devolver error de credenciales inválidas
+        if (!$user) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Credenciales inválidas',
+            ], 401);
+        }
+        
+        // Verificar si el usuario está habilitado ANTES de intentar autenticar
+        if ($user->enabled === 0) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Su cuenta ha sido deshabilitada. Contacte al administrador.',
+            ], 403);
+        }
+    
         // Intentar autenticar y generar token JWT
         if (!$token = JWTAuth::attempt($credentials)) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Invalid credentials',
+                'message' => 'Credenciales inválidas',
             ], 401);
         }
-    
-    // Obtener usuario autenticado
-    $user = JWTAuth::user();
+        
+        // Obtener usuario autenticado (ya verificamos que está habilitado)
+        $user = JWTAuth::user();
 
-    // Verificar si el usuario está habilitado
-    if (!$user->enabled) {
+        // Respuesta exitosa con token y datos del usuario
         return response()->json([
-            'status'  => 'error',
-            'message' => 'Usuario deshabilitado. Contacte al administrador.',
-        ], 403);
-    }
-
-    // Respuesta exitosa con token y datos del usuario
-    return response()->json([
-        'status'  => 'success',
-        'message' => 'Login successful',
-        'data'    => [
-            'user'  => $user,
-            'token' => $token,
-        ],
-    ], 200);
+            'status'  => 'success',
+            'message' => 'Inicio de sesión exitoso',
+            'data'    => [
+                'user'  => $user,
+                'token' => $token,
+            ],
+        ], 200);
 
     } catch (\Exception $e) { 
-    
-    // Captura de errores inesperados
-    return response()->json([
-        'status'  => 'error',
-        'message' => 'Login failed',
-        'errors'  => $e->getMessage(),
-    ], 500);
-        }
+        // Captura de errores inesperados
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Error al iniciar sesión',
+            'errors'  => $e->getMessage(),
+        ], 500);
     }
+}
 
     // Envío de email con link de recuperación de contraseña
     public function forgotPassword(Request $request){
@@ -449,20 +459,22 @@ public function scheduleAppointment(Request $request)
 //Metodo para obtener la lista de usuarios
 // Este método devuelve una lista de usuarios (clientes y médicos) con advertencia si no hay clientes
 // Solo los administradores pueden acceder a esta ruta
-// Devuelve un JSON con el estado, mensaje y datos de los usuarios  
-    public function listUsers() {
-    // Verificar si existen clientes
-    $clientesExisten = User::where('role_id', 2)->exists();
-    
-    // Obtener todos los usuarios excepto administradores (role_id = 1)
+// Devuelve un JSON con el estado, mensaje y datos de los usuarios
+
+public function listUsers() {
+    // Verificar si existen pacientes (role_id = 2)
+    $pacientesExisten = User::where('role_id', 2)->exists();
+
+    // Obtener todos los usuarios que son pacientes (role_id = 2) o médicos (role_id = 3)
+    // Excluye a los administradores (role_id = 1)
     $users = User::whereIn('role_id', [2, 3])
-                ->select('id', 'name', 'lastname', 'rut', 'phone', 'email', 'enabled')
+                ->select('id', 'name', 'lastname', 'rut', 'phone', 'email', 'enabled', 'role_id')
                 ->get();
 
-    // Respuesta con advertencia si no hay clientes
+    // Respuesta con advertencia si no hay pacientes
     return response()->json([
         'status'  => 'success',
-        'message' => $clientesExisten ? null : 'Advertencia: No hay clientes para mostrar.',
+        'message' => $pacientesExisten ? null : 'Advertencia: No hay pacientes para mostrar.',
         'data'    => $users
     ]);
 }
