@@ -371,7 +371,7 @@ public function verDisponibilidadMedicoPorNombre(Request $request)
     $user = Auth::user();
 
     // Verificar que el solicitante sea un paciente
-    if (!$user || $user->role_id !== 2) { 
+    if (!$user || $user->role_id !== 3) { 
         return response()->json(['error' => 'Acceso no autorizado.'], 403);
     }
 
@@ -382,7 +382,7 @@ public function verDisponibilidadMedicoPorNombre(Request $request)
     ]);
 
     // Buscar al médico exacto por nombre y apellido
-    $medico = User::where('role_id', 3) // role_id 3 para médicos
+    $medico = User::where('role_id', 2) // role_id 3 para médicos
         ->where('name', $request->nombre)
         ->where('lastname', $request->apellido)
         ->first();

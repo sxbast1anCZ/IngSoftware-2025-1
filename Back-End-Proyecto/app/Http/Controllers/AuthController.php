@@ -53,7 +53,7 @@ if ($rutValidation['error']) {
 }
 
 // Asignar rol por defecto (2 = paciente)
-$roleId = 2;
+$roleId = 3;
 
 // Crear nuevo usuario
 $user = User::create([
