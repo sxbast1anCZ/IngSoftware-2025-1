@@ -32,21 +32,21 @@ class DoctorSeeder extends Seeder
         }
 
         $doctores = [
-            ['Nicolás', 'Rojas', '13805655-4', 'Medicina General'],
-            ['Laura', 'Pérez', '11529652-3', 'Medicina General'],
-            ['Tomás', 'Silva', '17080772-3', 'Medicina General'],
+            ['Nicolas', 'Rojas', '13805655-4', 'Medicina General'],
+            ['Laura', 'Perez', '11529652-3', 'Medicina General'],
+            ['Tomas', 'Silva', '17080772-3', 'Medicina General'],
             ['Paula', 'Reyes', '19538070-8', 'Medicina General'],
             ['Felipe', 'Morales', '16010194-6', 'Medicina General'],
             ['Isabel', 'Fuentes', '17401793-K', 'Pediatría'],
             ['Jorge', 'Soto', '24888985-3', 'Pediatría'],
             ['Camila', 'Vargas', '9425636-4', 'Dermatología'],
-            ['Ricardo', 'Díaz', '9986323-4', 'Dermatología'],
-            ['Verónica', 'Castillo', '22190218-1', 'Ginecología'],
-            ['Daniel', 'Gómez', '16798845-8', 'Ginecología'],
+            ['Ricardo', 'Diaz', '9986323-4', 'Dermatología'],
+            ['Veronica', 'Castillo', '22190218-1', 'Ginecología'],
+            ['Daniel', 'Gomez', '16798845-8', 'Ginecología'],
             ['Marcela', 'Contreras', '20639337-8', 'Traumatología'],
-            ['Sebastián', 'Paredes', '15365583-9', 'Cardiología'],
-            ['Andrés', 'Bravo', '24544826-0', 'Cardiología'],
-            ['Sofía', 'Méndez', '7972633-8', 'Psiquiatría'],
+            ['Sebastian', 'Paredes', '15365583-9', 'Cardiología'],
+            ['Andres', 'Bravo', '24544826-0', 'Cardiología'],
+            ['Sofia', 'Mendez', '7972633-8', 'Psiquiatría'],
         ];
 
         foreach ($doctores as [$nombre, $apellido, $rut, $especialidad]) {
