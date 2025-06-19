@@ -24,11 +24,11 @@ class SpecialtyController extends Controller
     try {
         $especialidades = Specialty::whereHas('users', function ($query) {
                 $query->whereNotNull('specialty_id')
-                      ->where('role_id', 3); // solo médicos
+                      ->where('role_id', 2); // solo médicos
             })
             ->with(['users' => function ($query) {
                 $query->whereNotNull('specialty_id')
-                      ->where('role_id', 3)
+                      ->where('role_id', 2)
                       ->select('id', 'name', 'lastname', 'specialty_id');
             }])
             ->orderBy('name')
@@ -62,7 +62,33 @@ class SpecialtyController extends Controller
     }
     }
 
+/**
+ * Retorna la lista completa de especialidades médicas
+ * 
+ * Este método devuelve todas las especialidades disponibles para ser mostradas
+ * en el front-end, independientemente de si tienen médicos asociados o no.
+ *
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function getAllSpecialties(): JsonResponse
+{
+    try {
+        $specialties = Specialty::select('id', 'name')
+            ->orderBy('name')
+            ->get();
 
+        return response()->json([
+            'status' => 'success',
+            'data' => $specialties
+        ], 200);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Error al obtener las especialidades',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
 
 
