@@ -17,7 +17,6 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
 use App\Models\Specialty;
 
-
 class AuthController extends Controller
 {
 
