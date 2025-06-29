@@ -71,6 +71,10 @@ Route::middleware('auth:api')->group(function () {
 
 });
 
+Route::middleware('auth:api')->post('/licencia/pdf/citaLicencia', [LicenciaMedicaController::class, 'descargarLicenciaPorCita']);
+
+
+
 
 
 

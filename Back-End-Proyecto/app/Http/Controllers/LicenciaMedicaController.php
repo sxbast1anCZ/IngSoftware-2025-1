@@ -18,6 +18,10 @@ use Illuminate\Database\QueryException;
 use App\Models\Specialty;
 use App\Models\Diagnostico;
 use App\Models\LicenciaMedica;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Response;
+
 
 
 class LicenciaMedicaController extends Controller
@@ -83,10 +87,7 @@ class LicenciaMedicaController extends Controller
 }
 
 
-
-
-
-    public function verDiagnostico(Request $request)
+    public function verDiagnostico(Request $request) //ver licencia POR diagnóstico
 {
     try {
         // Validar que el input sea numérico
@@ -135,30 +136,7 @@ class LicenciaMedicaController extends Controller
     }
 }
 
-public function mostrarLicencia(Request $request)
-{
-    $request->validate([
-        'diagnostico_id' => ['required', 'numeric', 'exists:diagnosticos,id'],
-    ], [
-        'diagnostico_id.required' => 'Debe proporcionar el ID del diagnóstico.',
-        'diagnostico_id.numeric'  => 'El ID del diagnóstico debe ser un número.',
-        'diagnostico_id.exists'   => 'El diagnóstico solicitado no existe en el sistema.',
-    ]);
 
-    $licencia = LicenciaMedica::where('diagnostico_id', $request->diagnostico_id)->first();
-
-    if (!$licencia) {
-        return response()->json([
-            'status' => 'info',
-            'message' => 'No se ha emitido ninguna licencia médica para este diagnóstico.'
-        ], 404);
-    }
-
-    return response()->json([
-        'status' => 'success',
-        'licencia' => $licencia
-    ]);
-}
 
 
 public function mostrarLicenciaPorCita(Request $request)
@@ -214,6 +192,44 @@ public function mostrarLicenciaPorCita(Request $request)
             'detalle' => $e->getMessage()
         ], 500);
     }
+}
+
+public function descargarLicenciaPorCita(Request $request)
+{
+    $request->validate([
+        'appointment_id' => 'required|exists:appointments,id'
+    ]);
+
+    $user = JWTAuth::parseToken()->authenticate();
+
+    $cita = Appointment::with(['doctor.specialty', 'patient'])->find($request->appointment_id);
+    $paciente = $cita->patient;
+    $medico = $cita->doctor; 
+
+
+    if ($user->id !== $paciente->id) {
+        return response()->json(['error' => 'No autorizado'], 403);
+    }
+
+    $diagnostico = Diagnostico::where('appointment_id', $cita->id)->first();
+    if (!$diagnostico) {
+        return response()->json(['error' => 'No hay diagnóstico para esta cita.'], 404);
+    }
+
+    $licencia = LicenciaMedica::where('diagnostico_id', $diagnostico->id)->first();
+    if (!$licencia) {
+        return response()->json(['error' => 'No se ha emitido ninguna licencia médica para esta cita.'], 404);
+    }
+
+    $pdf = Pdf::loadView('licencia_pdf', compact('licencia', 'paciente', 'medico'));
+    $filename = "licencia_{$licencia->id}.pdf";
+
+    Storage::disk('public')->put("licencias/$filename", $pdf->output());
+
+    return response()->json([
+        'message' => 'Licencia generada',
+        'url' => asset("storage/licencias/$filename")
+    ]);
 }
 
 
