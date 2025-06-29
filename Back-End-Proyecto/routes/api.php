@@ -66,7 +66,8 @@ Route::middleware('auth:api')->group(function () {
 
     //Y estas para gestionar cosas de licencias médicas
     Route::post('/licencia/emitir', [LicenciaMedicaController::class, 'emitirLicencia']);
-    Route::post('/licencia/ver', [LicenciaMedicaController::class, 'mostrarLicencia']);
+    Route::post('/licencia/ver-por-cita', [LicenciaMedicaController::class, 'mostrarLicenciaPorCita']);
+
 
 });
 

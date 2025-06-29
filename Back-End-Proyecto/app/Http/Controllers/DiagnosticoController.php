@@ -24,15 +24,22 @@ class DiagnosticoController extends Controller
     public function registrarDiagnostico(Request $request)
 {
     $request->validate([
-        'appointment_id'     => 'required|exists:appointments,id',
+        'appointment_id'     => 'required|integer',
         'motivo_consulta'    => 'required|string|max:1000',
         'diagnostico'        => 'required|string|max:1000',
         'tratamiento'        => 'required|string|max:1000',
         'notas'              => 'nullable|string|max:2000',
     ]);
 
+    $cita = Appointment::find($request->appointment_id);
+
+    if (!$cita) {
+        return response()->json([
+            'error' => 'La cita a la cual usted intenta acceder no ha sido efectuada o no existe.'
+        ], 404);
+    }
+
     $doctor = JWTAuth::parseToken()->authenticate();
-    $cita = Appointment::findOrFail($request->appointment_id);
 
     if ($doctor->id !== $cita->doctor_id || !$doctor->isDoctor()) {
         return response()->json(['error' => 'No está autorizado para registrar diagnóstico en esta cita.'], 403);
@@ -53,10 +60,10 @@ class DiagnosticoController extends Controller
     return response()->json(['mensaje' => 'Diagnóstico registrado exitosamente.', 'diagnostico' => $diagnostico], 201);
 }
 
+
     public function verDiagnostico(Request $request)
 {
     try {
-        // Validar que el input sea numérico
         $request->validate([
             'appointment_id' => ['required', 'numeric'],
         ], [
@@ -64,17 +71,14 @@ class DiagnosticoController extends Controller
             'appointment_id.numeric'  => 'Los parámetros que usted intenta ingresar son incorrectos, por favor, ingrese el número de la cita a la cual quiere acceder a su diagnóstico.',
         ]);
 
-        // Verificar si la cita existe
         $appointment = Appointment::find($request->appointment_id);
 
         if (!$appointment) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Usted está intentando solicitar el diagnóstico de una cita que no existe.'
+                'error' => 'La cita a la cual usted intenta acceder no ha sido efectuada o no existe.'
             ], 404);
         }
 
-        // Buscar diagnóstico asociado
         $diagnostico = Diagnostico::where('appointment_id', $request->appointment_id)->first();
 
         if (!$diagnostico) {
@@ -88,7 +92,7 @@ class DiagnosticoController extends Controller
             'status' => 'success',
             'diagnostico' => $diagnostico
         ]);
-        
+
     } catch (\Illuminate\Validation\ValidationException $e) {
         return response()->json([
             'error' => 'Error de validación.',
@@ -101,6 +105,7 @@ class DiagnosticoController extends Controller
         ], 500);
     }
 }
+
 
 
 

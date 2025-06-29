@@ -9,6 +9,8 @@ class LicenciaMedica extends Model
 {
     use HasFactory;
 
+    protected $table = 'licencias_medicas'; // <--- Asegúrate que coincide con tu migración real
+
     protected $fillable = [
         'dias',
         'fecha_inicio',
@@ -22,3 +24,4 @@ class LicenciaMedica extends Model
         return $this->belongsTo(Diagnostico::class);
     }
 }
+
