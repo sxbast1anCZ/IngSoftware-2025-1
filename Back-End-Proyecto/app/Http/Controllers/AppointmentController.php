@@ -1006,6 +1006,43 @@ public function cancelarCitaMedico(Request $request)
 
 
 
+public function citasPaciente()
+{
+    $paciente = Auth::user();
+
+    if (!$paciente || $paciente->role_id != 3) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No autorizado.'
+        ], 403);
+    }
+
+    $citas = Appointment::where('patient_id', $paciente->id)
+        ->with(['doctor' => function ($q) {
+            $q->select('id', 'name', 'lastname', 'specialty_id')
+              ->with('specialty:id,name');
+        }])
+        ->orderBy('scheduled_at', 'desc')
+        ->get()
+        ->map(function ($cita) {
+            return [
+                'id' => $cita->id,
+                'fecha' => Carbon::parse($cita->scheduled_at)->format('d/m/Y'),
+                'hora' => Carbon::parse($cita->scheduled_at)->format('H:i'),
+                'estado' => $cita->status,
+                'doctor' => $cita->doctor->name . ' ' . $cita->doctor->lastname,
+                'especialidad' => $cita->doctor->specialty->name ?? null,
+                'motivo' => $cita->reason,
+                'precio' => $cita->price,
+                'duracion' => $cita->duration
+            ];
+        });
+
+    return response()->json([
+        'status' => 'success',
+        'data' => $citas
+    ]);
+}
 
 
 
