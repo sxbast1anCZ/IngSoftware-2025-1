@@ -6,6 +6,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DoctorAvailabilityController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\DiagnosticoController;
+use App\Http\Controllers\LicenciaMedicaController;
+
 
 
 //Rutas sin autenticación, son públicas
@@ -56,17 +59,20 @@ Route::middleware('auth:api')->group(function () {
   
 });
 
-  /* Ejemplo del body de POSTMAN de "Activar Bloque
-    * Tipo de Usuario = Medico
-    * Body:
-    {
-  "bloques": [
-    {
-      "dia_semana": 1,
-      "hora_inicio": "08:00",
-      "hora_fin": "10:00"
-    }
-  ]
-}
-    */
+//Rutas para gestionar el diagnóstioc de los médicos
+Route::middleware('auth:api')->group(function () {
+    Route::post('/diagnostico/registrar', [DiagnosticoController::class, 'registrarDiagnostico']);
+    Route::post('/diagnostico/ver', [DiagnosticoController::class, 'verDiagnostico']);
+
+    //Y estas para gestionar cosas de licencias médicas
+    Route::post('/licencia/emitir', [LicenciaMedicaController::class, 'emitirLicencia']);
+    Route::post('/licencia/ver', [LicenciaMedicaController::class, 'mostrarLicencia']);
+
+});
+
+
+
+
+
+
 

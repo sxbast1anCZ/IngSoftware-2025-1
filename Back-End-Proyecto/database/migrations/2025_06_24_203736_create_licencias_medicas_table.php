@@ -13,8 +13,14 @@ return new class extends Migration
     {
         Schema::create('licencias_medicas', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('diagnostico_id')->constrained()->onDelete('cascade');
+            $table->integer('dias');
+            $table->date('fecha_inicio');
+            $table->date('fecha_fin');
+            $table->text('motivo');
             $table->timestamps();
-        });
+});
+
     }
 
     /**

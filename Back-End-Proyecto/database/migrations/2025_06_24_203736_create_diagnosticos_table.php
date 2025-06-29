@@ -13,8 +13,14 @@ return new class extends Migration
     {
         Schema::create('diagnosticos', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('appointment_id')->constrained()->onDelete('cascade');
+            $table->text('motivo_consulta');
+            $table->text('diagnostico');
+            $table->text('tratamiento');
+            $table->text('notas')->nullable();
             $table->timestamps();
-        });
+});
+
     }
 
     /**
