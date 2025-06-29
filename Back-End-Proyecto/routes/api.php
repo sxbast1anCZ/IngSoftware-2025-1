@@ -24,7 +24,7 @@ Route::get('/medicos/listado-completo', [AppointmentController::class, 'listarMe
 
 //Rutas para generar citas médicas
 Route::middleware('auth:api')->post('/appointments', [AppointmentController::class, 'scheduleAppointment']);
-Route::middleware('auth:api')->get('/appointments', [AuthController::class, 'getAppointments']);
+Route::middleware('auth:api')->get('/appointments', [AppointmentController::class, 'citasPaciente']);
 
 // Rutas protegidas para usuarios autenticados y habilitados
 Route::middleware(['is.auth', 'is.enabled'])->group(function () {
