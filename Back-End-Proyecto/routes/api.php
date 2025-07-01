@@ -8,6 +8,7 @@ use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DiagnosticoController;
 use App\Http\Controllers\LicenciaMedicaController;
+use App\Http\Controllers\AdminAppointmentController;
 
 
 
@@ -42,6 +43,12 @@ Route::middleware(['is.auth', 'is.admin', 'is.enabled'])->group(function () {
     Route::get('admin/users', [AuthController::class, 'listUsers']);
     Route::put('admin/users/{id}/toggle', [AuthController::class, 'toggleUserStatus']);
     Route::put('users/{id}', [AuthController::class, 'updateUser']); // admin actualiza otro usuario
+    // Listar (igual)
+    Route::get('admin/appointments',[AdminAppointmentController::class,'index']);
+    // Actualizar por body
+    Route::put('admin/appointments/update',[AdminAppointmentController::class,'modificarCita']);
+    // Cancelar por body
+    Route::post('admin/appointments/cancel',[AdminAppointmentController::class,'cancelarCita']);
 });
 
 //Rutas para gestionar la disponibilidad de un médico
