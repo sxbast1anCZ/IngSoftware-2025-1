@@ -88,21 +88,6 @@ class AdminAppointmentController extends Controller
                            ? Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_at)
                            : $appointment->scheduled_at;
 
-        // 5) Comprobar que el médico tenga un bloque activo en ese día/hora
-        $diaSemana = $newScheduled->dayOfWeekIso;           // 1 = lunes … 7 = domingo
-        $hora      = $newScheduled->format('H:i:s');
-
-        $tieneDisp = DisponibilidadMedico::where('user_id', $newDoctorId)
-            ->where('dia_semana', $diaSemana)
-            ->where('activo', true)
-            ->whereRaw('? BETWEEN hora_inicio AND hora_fin', [$hora])
-            ->exists();
-
-        if (! $tieneDisp) {
-            return response()->json([
-                'error' => 'El médico al que se le intenta asignar la cita no tiene disponibilidad para ese horario.'
-            ], 422);
-        }
 
         // 6) Guardar cambios
         $appointment->fill($request->only(['scheduled_at','doctor_id','reason']));
