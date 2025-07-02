@@ -26,6 +26,16 @@ protected $fillable = [
     'reason',
 ];
 
+/**
+ * Para que scheduled_at sea siempre un Carbon
+ */
+protected $casts = [
+    'scheduled_at' => 'datetime',
+    'duration'     => 'integer',
+    'price'        => 'decimal:2',
+];
+
+
 
     /**
      * Relación con el modelo User (médico) para claves foraneas
@@ -58,5 +68,32 @@ protected $fillable = [
             ->where('scheduled_at', $scheduledAt)
             ->exists();
     }
+
+/**
+ * Filtra por estado (o devuelve todos si es 'all').
+ */
+public function scopeByStatus($query, $status)
+{
+    if ($status && $status !== 'all') {
+        return $query->where('status', $status);
+    }
+    return $query;
+}
+
+/**
+ * Sólo citas futuras.
+ */
+public function scopeFuture($query)
+{
+    return $query->where('scheduled_at', '>=', now());
+}
+
+
+
+
+
+
+
+
 }
 

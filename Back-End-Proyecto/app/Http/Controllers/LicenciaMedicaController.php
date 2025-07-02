@@ -196,40 +196,67 @@ public function mostrarLicenciaPorCita(Request $request)
 
 public function descargarLicenciaPorCita(Request $request)
 {
-    $request->validate([
-        'appointment_id' => 'required|exists:appointments,id'
+    // 1. Validación de input
+    $validator = Validator::make($request->all(), [
+        'appointment_id' => 'required|numeric|exists:appointments,id',
+    ], [
+        'appointment_id.required' => 'Debe indicar el ID de la cita.',
+        'appointment_id.numeric'  => 'El valor ingresado debe ser numérico.',
+        'appointment_id.exists'   => 'La cita indicada no existe.',
     ]);
 
-    $user = JWTAuth::parseToken()->authenticate();
-
-    $cita = Appointment::with(['doctor.specialty', 'patient'])->find($request->appointment_id);
-    $paciente = $cita->patient;
-    $medico = $cita->doctor; 
-
-
-    if ($user->id !== $paciente->id) {
-        return response()->json(['error' => 'No autorizado'], 403);
+    if ($validator->fails()) {
+        // Retornamos siempre el primer error de appointment_id
+        return response()->json([
+            'error' => $validator->errors()->first('appointment_id')
+        ], 422);
     }
 
+    // 2. Autenticación
+    $user = JWTAuth::parseToken()->authenticate();
+
+    // 3. Carga de la cita con relaciones
+    $cita = Appointment::with(['doctor.specialty', 'patient'])
+                      ->find($request->appointment_id);
+
+    // (Aunque el exists ya garantiza que la cita existe, verificamos por seguridad)
+    if (! $cita) {
+        return response()->json(['error' => 'Cita no encontrada.'], 404);
+    }
+
+    // 4. Autorización: solo el paciente que reservó puede descargar
+    if ($user->id !== $cita->patient->id) {
+        return response()->json(['error' => 'No autorizado.'], 403);
+    }
+
+    // 5. Validaciones sobre el diagnóstico y la licencia
     $diagnostico = Diagnostico::where('appointment_id', $cita->id)->first();
-    if (!$diagnostico) {
+    if (! $diagnostico) {
         return response()->json(['error' => 'No hay diagnóstico para esta cita.'], 404);
     }
 
     $licencia = LicenciaMedica::where('diagnostico_id', $diagnostico->id)->first();
-    if (!$licencia) {
+    if (! $licencia) {
         return response()->json(['error' => 'No se ha emitido ninguna licencia médica para esta cita.'], 404);
     }
 
-    $pdf = Pdf::loadView('licencia_pdf', compact('licencia', 'paciente', 'medico'));
-    $filename = "licencia_{$licencia->id}.pdf";
+    // 6. Generación y almacenamiento del PDF con manejo de errores
+    try {
+        $pdf = PDF::loadView('licencia_pdf', compact('licencia', 'cita'));
+        $filename = "licencia_{$licencia->id}.pdf";
+        Storage::disk('public')->put("licencias/{$filename}", $pdf->output());
+    } catch (\Throwable $e) {
+        Log::error("Error generando licencia PDF (ID cita: {$cita->id}): " . $e->getMessage());
+        return response()->json([
+            'error' => 'Ocurrió un error al generar la licencia médica.'
+        ], 500);
+    }
 
-    Storage::disk('public')->put("licencias/$filename", $pdf->output());
-
+    // 7. Respuesta exitosa
     return response()->json([
-        'message' => 'Licencia generada',
-        'url' => asset("storage/licencias/$filename")
-    ]);
+        'message' => 'Licencia generada correctamente.',
+        'url'     => asset("storage/licencias/{$filename}")
+    ], 200);
 }
 
 
