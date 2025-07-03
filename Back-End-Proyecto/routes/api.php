@@ -30,6 +30,8 @@ Route::get('/medicos/listado-completo', [AppointmentController::class, 'listarMe
 Route::middleware('auth:api')->post('/appointments', [AppointmentController::class, 'scheduleAppointment']);
 Route::middleware('auth:api')->get('/appointments', [AppointmentController::class, 'citasPaciente']);
 
+Route::middleware('auth:api')->get('/paciente/historial', [DiagnosticoController::class, 'historialPaciente']);
+
 // Rutas protegidas para usuarios autenticados y habilitados
 Route::middleware(['is.auth', 'is.enabled'])->group(function () {
     Route::get('me', [AuthController::class, 'me']);
@@ -74,8 +76,6 @@ Route::middleware('auth:api')->group(function () {
     //Y estas para gestionar cosas de licencias médicas
     Route::post('/licencia/emitir', [LicenciaMedicaController::class, 'emitirLicencia']);
     Route::post('/licencia/ver-por-cita', [LicenciaMedicaController::class, 'mostrarLicenciaPorCita']);
-
-
 });
 
 Route::middleware('auth:api')->post('/licencia/pdf/citaLicencia', [LicenciaMedicaController::class, 'descargarLicenciaPorCita']);

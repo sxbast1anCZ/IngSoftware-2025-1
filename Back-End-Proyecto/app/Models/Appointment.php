@@ -88,6 +88,10 @@ public function scopeFuture($query)
     return $query->where('scheduled_at', '>=', now());
 }
 
+public function diagnostico() {
+    return $this->hasOne(Diagnostico::class);
+}
+
 
 
 

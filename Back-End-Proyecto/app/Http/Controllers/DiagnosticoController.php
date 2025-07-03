@@ -104,9 +104,47 @@ class DiagnosticoController extends Controller
             'detalle' => $e->getMessage()
         ], 500);
     }
+
 }
 
+public function historialPaciente(Request $request)
+{
+    try {
+        $paciente = JWTAuth::parseToken()->authenticate();
 
+        if (!$paciente || !$paciente->isPatient()) {
+            return response()->json(['error' => 'No autorizado.'], 403);
+        }
+
+        $citas = Appointment::with(['doctor', 'diagnostico', 'diagnostico.licencia'])
+            ->where('patient_id', $paciente->id)
+            ->whereHas('diagnostico')
+            ->orderByDesc('scheduled_at')
+            ->get();
+
+        $historial = $citas->map(function ($cita) {
+        return [
+        'cita_id'         => $cita->id,
+        'fecha'           => $cita->scheduled_at,
+        'motivo_consulta' => $cita->diagnostico->motivo_consulta,
+        'diagnostico'     => $cita->diagnostico->diagnostico,
+        'tratamiento'     => $cita->diagnostico->tratamiento,
+        'doctor'          => $cita->doctor->name . ' ' . $cita->doctor->lastname,
+        'licencia_url'    => optional($cita->diagnostico->licencia)->exists()
+            ? url("/api/licencia/pdf/citaLicencia?appointment_id={$cita->id}")
+            : null,
+        ];
+    });
+
+
+        return response()->json($historial);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error' => 'Error interno',
+            'detalle' => $e->getMessage(),
+        ], 500);
+    }
+}
 
 
 

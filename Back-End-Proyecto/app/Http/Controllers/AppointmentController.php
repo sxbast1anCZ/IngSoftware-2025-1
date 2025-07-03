@@ -1044,10 +1044,4 @@ public function citasPaciente()
     ]);
 }
 
-
-
-
-
-
-
 }
